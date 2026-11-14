@@ -38,7 +38,9 @@
 
   .app { display: flex; min-height: 100%; }
   .rail { position: fixed; top:0; bottom:0; left:0; width: 236px; z-index: 40; background: var(--rail); color: var(--rail-ink); display:flex; flex-direction:column; transition: transform .22s ease; }
-  .rail__brand { display:flex; align-items:center; gap:10px; padding: 18px 18px 14px; border-bottom:1px solid var(--rail-line); }
+  .rail__brand { display:flex; flex-direction:column; align-items:center; gap:7px; padding: 16px 16px 14px; border-bottom:1px solid var(--rail-line); }
+  .rail__logo { width:100%; max-width:176px; height:auto; display:block; background:#fff; padding:9px 13px; border-radius:10px; box-sizing:border-box; }
+  .rail__tag { font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--rail-dim); }
   .logo-mark { width:30px; height:30px; border-radius:7px; background: var(--brand-red); position:relative; flex:none; }
   .logo-mark::after { content:""; position:absolute; inset:9px; border:2.5px solid #fff; border-radius:50%; }
   .logo-mark::before { content:""; position:absolute; left:50%; top:50%; width:2.5px; height:9px; background:#fff; transform: translate(-50%,-100%); }
@@ -222,7 +224,7 @@
 
 <div class="app" id="app" hidden>
   <aside class="rail" id="rail">
-    <div class="rail__brand"><div class="logo-mark"></div><div><div class="brand-name">Asset&nbsp;Track</div><div class="brand-sub">Back-Office</div></div></div>
+    <div class="rail__brand"><img class="rail__logo" src="/img/logo.png" alt="Asset Track"><div class="rail__tag">Back-Office</div></div>
     <nav class="nav" id="nav"></nav>
     <div class="rail__foot">
       <div class="avatar" id="railAvatar">–</div>
