@@ -43,6 +43,11 @@
       return out;
     },
 
+    // ---- Recurring tasks --------------------------------------------------
+    async createRecurrence(t)      { return client.from("task_recurrences").insert(t).select().single(); },
+    async stopRecurrence(id)       { return client.from("task_recurrences").update({ active:false }).eq("id", id); },
+    async generateDaily()          { return client.rpc("generate_recurring_tasks"); },
+
     // ---- Tasks ------------------------------------------------------------
     async createTask(t)            { return client.from("tasks").insert(t).select().single(); },
     async updateTask(id, patch)    { return client.from("tasks").update(patch).eq("id", id).select().single(); },

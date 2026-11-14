@@ -298,7 +298,7 @@
     (raw.task_comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1;}).forEach(function(c){
       (commentsByTask[c.task_id]=commentsByTask[c.task_id]||[]).push({ who:(user(c.author_id)||{}).init||"·", txt:c.body, when:fmtDate(c.created_at) });
     });
-    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:clientNameById[t.client_id]||"—", tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
+    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:clientNameById[t.client_id]||"—", tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, recId:t.recurrence_id||null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
 
     db.installs = (raw.installations||[]).map(function(i){ return { id:i.id, ref:i.ref, client:clientNameById[i.client_id]||i.vehicle_reg||"—", contact:i.contact_name||"—", phone:i.contact_phone||"—", vehicle:i.vehicle_reg||(vehicleRegById[i.vehicle_id]||"—"), type:INSTALL_LABEL[i.job_type]||i.job_type, date:i.scheduled_date||"", time:(i.scheduled_time||"").slice(0,5), loc:i.location||"—", tech:i.assigned_to, status:i.status, photos:0, signed:!!i.signed }; });
 
@@ -324,7 +324,9 @@
     moveStock: async function(itemId,type,qty,clientName,purpose,note){ warn(await API.moveStock({ item_id:itemId, movement_type:type, quantity:qty, client_id:clientIdByName[clientName]||null, performed_by:db.currentUser, purpose:purpose, note:note||null }),"Couldn't record movement"); },
     createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
     updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
-    createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; }
+    createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; },
+    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
+    stopRecurrence: async function(id){ warn(await API.stopRecurrence(id),"Couldn't stop repeat"); }
   };
 
   /* ---------------- Nav ---------------- */
@@ -441,16 +443,20 @@
   }
   function openTask(id){
     var t=db.tasks.find(function(x){return x.id===id;}); if(!t)return;
-    var body='<div class="detail-grid" style="margin-bottom:16px">'+field("Client",t.client)+field("Assigned to",uName(t.tech))+field("Due date",t.due||"—")+field("Recurring",t.recurring||"One-off")+'<div class="field"><label>Priority</label><div class="v">'+prioBadge(t.prio)+'</div></div></div>'
+    var repeatBanner = t.recId ? '<div class="inline-note" style="margin-bottom:12px"><span>🔁</span><span>This is a <b>'+esc(t.recurring||"recurring")+'</b> task — a fresh copy is created automatically and is ready each time '+esc(uFirst(t.tech))+' logs in.'+(cur()&&cur().role==="admin"?' Use <b>Stop repeat</b> below to end it.':'')+'</span></div>' : '';
+    var body=repeatBanner+'<div class="detail-grid" style="margin-bottom:16px">'+field("Client",t.client)+field("Assigned to",uName(t.tech))+field("Due date",t.due||"—")+field("Repeat",t.recurring||"One-off")+'<div class="field"><label>Priority</label><div class="v">'+prioBadge(t.prio)+'</div></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Status</label><select id="t-status">'+['open','in_progress','done'].map(function(s){return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+STATUS_LABEL[s]+'</option>';}).join('')+'</select></div>'
       +'<div class="form-row"><label class="lbl">Reassign to</label><select id="t-reassign">'+db.users.filter(function(u){return u.role==="technician"||u.id===t.tech;}).map(function(u){return '<option value="'+u.id+'"'+(u.id===t.tech?' selected':'')+'>'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
       +'<div class="section-title">Comments &amp; findings</div><div id="t-comments">'+renderComments(t.comments)+'</div><div class="form-row" style="margin-top:12px"><textarea id="t-newcomment" rows="2" placeholder="Add a finding…"></textarea></div><button class="btn btn--sm" id="t-addcomment">Add comment</button>';
-    openModal(t.title, body, [ { label:"Close", cls:"btn", fn:closeModal }, { label:"Save", cls:"btn btn--primary", fn:function(){
+    var actions=[ { label:"Close", cls:"btn", fn:closeModal } ];
+    if(t.recId && cur() && cur().role==="admin"){ actions.push({ label:"Stop repeat", cls:"btn", fn:async function(){ await P.stopRecurrence(t.recId); closeModal(); toast("Repeat stopped — no new copies will be created"); } }); }
+    actions.push({ label:"Save", cls:"btn btn--primary", fn:function(){
           var newTech=document.getElementById("t-reassign").value, reassigned=newTech!==t.tech, newStatus=document.getElementById("t-status").value;
           if(reassigned){ var oldName=uFirst(t.tech); t.tech=newTech; t.comments.push({who:cur().init,txt:"Task passed from "+oldName+" to "+uFirst(newTech)+".",when:"Just now"}); P.reassign(t.id,newTech); P.addComment(t.id,"Task passed from "+oldName+" to "+uFirst(newTech)+"."); }
           if(newStatus!==t.status){ t.status=newStatus; P.updateTask(t.id,{status:newStatus, completed_at:newStatus==="done"?new Date().toISOString():null}); }
           renderNav(); closeModal(); toast(reassigned?("Task passed to "+uFirst(newTech)+" · notification sent"):"Task updated"); render();
-        } } ]);
+        } });
+    openModal(t.title, body, actions);
     document.getElementById("t-addcomment").onclick=function(){ var ta=document.getElementById("t-newcomment"); var txt=ta.value.trim(); if(!txt)return; t.comments.push({who:cur().init,txt:txt,when:"Just now"}); P.addComment(t.id,txt); document.getElementById("t-comments").innerHTML=renderComments(t.comments); ta.value=""; toast("Comment added"); };
   }
   function renderComments(cs){ if(!cs.length)return '<div class="empty" style="padding:16px">No comments yet</div>'; return cs.map(function(c){ return '<div class="comment"><div class="avatar">'+esc(c.who)+'</div><div><div class="comment__who">'+esc(c.who)+'<span>'+esc(c.when)+'</span></div><div class="comment__txt">'+esc(c.txt)+'</div></div></div>'; }).join(''); }
@@ -461,7 +467,7 @@
       +'<div class="form-2"><div class="form-row"><label class="lbl">Client</label><select id="f-client">'+db.clients.map(function(c){return '<option'+(pre.client===c.name?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
       +'<div class="form-row"><label class="lbl">Assign to</label><select id="f-tech">'+techs.map(function(u){return '<option value="'+u.id+'">'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Due date</label><input id="f-due" type="date" value="'+TODAY+'"></div><div class="form-row"><label class="lbl">Priority</label><select id="f-prio"><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="urgent"'+(pre.prio==="urgent"?' selected':'')+'>Urgent</option></select></div></div>'
-      +'<div class="form-row"><label class="lbl">Recurring</label><select id="f-rec"><option value="">One-off</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option></select></div>'
+      +'<div class="form-row"><label class="lbl">Repeat</label><select id="f-rec"><option value="">One-off (just this once)</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option></select><div class="cellmuted" id="f-rec-hint" style="margin-top:6px;display:none"></div></div>'
       +'<div class="form-row"><label class="lbl">Note (optional)</label><textarea id="f-note" rows="2" placeholder="e.g. reg B 902 DLR · has dash cams + diesel tracking"></textarea></div>'
       +'<div class="inline-note"><span>ⓘ</span><span>The note becomes the first comment on the task. The assigned technician gets a WhatsApp + email once notifications are wired.</span></div>';
     openModal("New task", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Create task", cls:"btn btn--primary", fn:async function(){
@@ -469,11 +475,22 @@
           var tech=document.getElementById("f-tech").value;
           var a={ title:title, client:document.getElementById("f-client").value, tech:tech, due:document.getElementById("f-due").value, prio:document.getElementById("f-prio").value, recurring:document.getElementById("f-rec").value||null };
           var note=document.getElementById("f-note").value.trim();
+          if(a.recurring){
+            a.note=note; closeModal();
+            var tpl=await P.createRecurrence(a); if(!tpl) return;
+            try { await API.generateDaily(); } catch(e){}
+            var raw=await API.loadAll(); mapAll(raw);
+            var every={Daily:"day",Weekly:"week",Monthly:"month",Quarterly:"quarter"}[a.recurring]||"cycle";
+            renderNav(); toast(a.recurring+" task set up · a fresh one appears every "+every+" for "+uFirst(tech)); go("tasks");
+            return;
+          }
           closeModal(); var row=await P.createTask(a); if(!row) return;
           var comments=[]; if(note){ comments.push({who:cur().init,txt:note,when:"Just now"}); P.addComment(row.id,note); }
-          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, comments:comments, created_at:new Date().toISOString(), done_at:null });
+          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, recId:null, comments:comments, created_at:new Date().toISOString(), done_at:null });
           renderNav(); toast("Task created"+(note?" with note":"")+" · for "+uFirst(tech)); go("tasks");
         } } ]);
+    var recSel=document.getElementById("f-rec"), recHint=document.getElementById("f-rec-hint");
+    recSel.onchange=function(){ var v=recSel.value; if(v){ recHint.style.display=""; recHint.textContent = v==="Daily" ? "A fresh task is created automatically every morning — it's already waiting when "+uFirst(document.getElementById("f-tech").value)+" logs in." : "A fresh task is created automatically each "+({Weekly:"week",Monthly:"month",Quarterly:"quarter"}[v]||"cycle")+"."; } else { recHint.style.display="none"; } };
   }
   function quickOfflineTask(s){ openTaskForm({ title:"Investigate offline tracker — "+s.vehicle, client:s.client, prio:"urgent" }); }
 
@@ -814,6 +831,7 @@
     var boot=document.getElementById("bootScreen"); boot.hidden=false; boot.textContent="Loading your data…";
     var me=await API.myProfile();
     if(!me){ showLogin("Could not load your profile. Contact your admin."); return; }
+    try { await API.generateDaily(); } catch(e){ /* non-fatal: the morning cron also covers this */ }
     var raw=await API.loadAll(); mapAll(raw);
     if(!db.users.find(function(u){return u.id===me.id;})) db.users.push({ id:me.id, name:me.first_name||"", surname:me.last_name||"", init:me.initials||"U", role:me.role, perms:me.module_access||[], phone:me.phone });
     db.currentUser=me.id;
