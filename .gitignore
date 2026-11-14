@@ -1,5 +1,6 @@
-# Secrets & local config
-public/js/config.js
+# config.js holds the Supabase URL + publishable (anon) key.
+# The publishable key is browser-safe (protected by RLS), so it ships with the
+# static site. Real secrets (service_role, API tokens) live in .env only.
 .env
 .env.local
 *.key

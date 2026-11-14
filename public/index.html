@@ -1,65 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Asset Track Back-Office</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <style>
-  /* Layout: fixed dark side rail + light scrolling work area; cards on a tinted neutral ground.
-     Telematics ops tool — grey/red brand, semantic green/amber/red for device & SLA state.
-     Tablet-first targets: controls >= 40px so technicians can work on tablets. */
   :root {
-    --brand-red: #e31e24;
-    --brand-red-ink: #b3161b;
-    --rail: #2b2b2e;
-    --rail-ink: #e9e9ec;
-    --rail-dim: #9a9aa2;
-    --rail-line: #3c3c40;
-    --bg: #ececed;
-    --surface: #ffffff;
-    --surface-2: #f6f6f7;
-    --fg: #26262a;
-    --fg-dim: #6c6c74;
-    --line: #dddde1;
-    --good: #1f9254;
-    --good-bg: #e4f3ea;
-    --warn: #b7791f;
-    --warn-bg: #fbf1dd;
-    --crit: #d1232a;
-    --crit-bg: #fbe6e7;
-    --info: #2563a8;
-    --info-bg: #e5eef8;
-    --radius: 10px;
-    --shadow: 0 1px 2px rgba(20,20,25,.06), 0 2px 10px rgba(20,20,25,.05);
-    --f-head: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-    --f-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --brand-red: #e31e24; --brand-red-ink: #b3161b;
+    --rail: #2b2b2e; --rail-ink: #e9e9ec; --rail-dim: #9a9aa2; --rail-line: #3c3c40;
+    --bg: #ececed; --surface: #ffffff; --surface-2: #f6f6f7; --fg: #26262a; --fg-dim: #6c6c74; --line: #dddde1;
+    --good: #1f9254; --good-bg: #e4f3ea; --warn: #b7791f; --warn-bg: #fbf1dd; --crit: #d1232a; --crit-bg: #fbe6e7; --info: #2563a8; --info-bg: #e5eef8;
+    --radius: 10px; --shadow: 0 1px 2px rgba(20,20,25,.06), 0 2px 10px rgba(20,20,25,.05);
+    --f-head: "Space Grotesk", ui-sans-serif, system-ui, sans-serif; --f-body: "Inter", ui-sans-serif, system-ui, sans-serif;
     color-scheme: light;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --rail: #202023; --rail-ink: #e9e9ec; --rail-dim: #8f8f98; --rail-line: #333337;
-      --bg: #161618; --surface: #1f1f22; --surface-2: #27272b; --fg: #e7e7ea; --fg-dim: #9a9aa3; --line: #34343a;
-      --good: #4ac07e; --good-bg: #163024; --warn: #e0a84a; --warn-bg: #3a2e14; --crit: #f06a6f; --crit-bg: #3a1a1c; --info: #6ba6e6; --info-bg: #15293f;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.28);
-      color-scheme: dark;
-    }
-  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --rail: #202023; --rail-ink: #e9e9ec; --rail-dim: #8f8f98; --rail-line: #333337;
+    --bg: #161618; --surface: #1f1f22; --surface-2: #27272b; --fg: #e7e7ea; --fg-dim: #9a9aa3; --line: #34343a;
+    --good: #4ac07e; --good-bg: #163024; --warn: #e0a84a; --warn-bg: #3a2e14; --crit: #f06a6f; --crit-bg: #3a1a1c; --info: #6ba6e6; --info-bg: #15293f;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.28); color-scheme: dark;
+  } }
   :root[data-theme="dark"] {
     --rail: #202023; --rail-ink: #e9e9ec; --rail-dim: #8f8f98; --rail-line: #333337;
     --bg: #161618; --surface: #1f1f22; --surface-2: #27272b; --fg: #e7e7ea; --fg-dim: #9a9aa3; --line: #34343a;
     --good: #4ac07e; --good-bg: #163024; --warn: #e0a84a; --warn-bg: #3a2e14; --crit: #f06a6f; --crit-bg: #3a1a1c; --info: #6ba6e6; --info-bg: #15293f;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.28);
-    color-scheme: dark;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.28); color-scheme: dark;
   }
-
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
   h1,h2,h3,h4 { font-family: var(--f-head); font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
   button { font-family: inherit; }
   .tnum { font-variant-numeric: tabular-nums; }
+  [hidden] { display: none !important; }
 
   .app { display: flex; min-height: 100%; }
-
-  /* Side rail */
-  .rail { position: fixed; top:0; bottom:0; left:0; width: 236px; z-index: 40; background: var(--rail); color: var(--rail-ink); display:flex; flex-direction:column; padding-left: env(safe-area-inset-left,0px); transition: transform .22s ease; }
-  .rail__brand { display:flex; align-items:center; gap:10px; padding: 18px 18px 14px; padding-top: calc(18px + env(safe-area-inset-top,0px)); border-bottom:1px solid var(--rail-line); }
+  .rail { position: fixed; top:0; bottom:0; left:0; width: 236px; z-index: 40; background: var(--rail); color: var(--rail-ink); display:flex; flex-direction:column; transition: transform .22s ease; }
+  .rail__brand { display:flex; align-items:center; gap:10px; padding: 18px 18px 14px; border-bottom:1px solid var(--rail-line); }
   .logo-mark { width:30px; height:30px; border-radius:7px; background: var(--brand-red); position:relative; flex:none; }
   .logo-mark::after { content:""; position:absolute; inset:9px; border:2.5px solid #fff; border-radius:50%; }
   .logo-mark::before { content:""; position:absolute; left:50%; top:50%; width:2.5px; height:9px; background:#fff; transform: translate(-50%,-100%); }
@@ -73,16 +50,15 @@
   .nav__item .ico { width:18px; height:18px; flex:none; opacity:.92; }
   .nav__item .ct { margin-left:auto; font-size:11px; background: rgba(255,255,255,.1); color: var(--rail-ink); padding:1px 7px; border-radius:20px; min-width:20px; text-align:center; }
   .nav__item.is-active .ct { background: var(--brand-red); color:#fff; }
-  .rail__foot { border-top:1px solid var(--rail-line); padding: 12px 14px; padding-bottom: calc(12px + env(safe-area-inset-bottom,0px)); }
-  .viewas { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--rail-dim); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-  .viewas-row { display:flex; align-items:center; gap:10px; }
+  .rail__foot { border-top:1px solid var(--rail-line); padding: 12px 14px; display:flex; align-items:center; gap:10px; }
   .avatar { width:30px; height:30px; border-radius:50%; background: var(--brand-red); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; flex:none; font-family: var(--f-head); }
-  .uselect { flex:1; min-width:0; background: rgba(255,255,255,.06); color: var(--rail-ink); border:1px solid var(--rail-line); border-radius:8px; padding:7px 8px; font:inherit; font-size:12.5px; outline:none; }
+  .rail__foot .who { font-size:12.5px; font-weight:500; line-height:1.15; }
+  .rail__foot .role { font-size:10.5px; color: var(--rail-dim); }
+  .signout { margin-left:auto; background:transparent; border:1px solid var(--rail-line); color:var(--rail-dim); border-radius:7px; padding:6px 8px; cursor:pointer; font-size:11px; }
+  .signout:hover { color:#fff; border-color:var(--rail-dim); }
 
-  /* Main */
   .main { flex:1; min-width:0; margin-left:236px; display:flex; flex-direction:column; }
-  .topbar { position:sticky; top: env(safe-area-inset-top,0px); z-index:30; display:flex; align-items:center; gap:12px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom:1px solid var(--line); padding: 11px 0; padding-left: max(20px, env(safe-area-inset-left,0px)); padding-right: max(20px, env(safe-area-inset-right,0px)); }
-  body::before { content:""; position:fixed; inset:0 0 auto; height: env(safe-area-inset-top,0px); z-index:31; background: var(--bg); }
+  .topbar { position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:12px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom:1px solid var(--line); padding: 11px 20px; }
   .hamburger { display:none; width:40px; height:40px; border-radius:8px; border:1px solid var(--line); background: var(--surface); color: var(--fg); cursor:pointer; flex:none; align-items:center; justify-content:center; }
   .topbar h1 { font-size:17px; }
   .topbar .crumb { font-size:11.5px; color: var(--fg-dim); letter-spacing:.04em; text-transform:uppercase; }
@@ -91,66 +67,54 @@
   .btn:hover { background: var(--surface-2); }
   .btn--primary { background: var(--brand-red); border-color: var(--brand-red); color:#fff; }
   .btn--primary:hover { background: var(--brand-red-ink); }
-  .btn--ghost { background:transparent; }
   .btn--danger { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 40%, transparent); background: var(--crit-bg); }
   .btn .ico { width:16px; height:16px; }
   .btn--sm { padding:7px 10px; font-size:12px; min-height:34px; }
+  .btn[disabled] { opacity:.6; cursor:default; }
 
-  .view { padding:20px; padding-left:max(20px, env(safe-area-inset-left,0px)); padding-right:max(20px, env(safe-area-inset-right,0px)); padding-bottom: calc(40px + env(safe-area-inset-bottom,0px)); max-width:1180px; width:100%; }
-
+  .view { padding:20px; padding-bottom: 40px; max-width:1180px; width:100%; }
   .kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(158px,1fr)); gap:12px; margin-bottom:18px; }
   .kpi { background: var(--surface); border:1px solid var(--line); border-radius: var(--radius); padding:14px 15px; box-shadow: var(--shadow); }
-  .kpi__label { font-size:11.5px; color: var(--fg-dim); text-transform:uppercase; letter-spacing:.05em; display:flex; align-items:center; gap:6px; }
+  .kpi__label { font-size:11.5px; color: var(--fg-dim); text-transform:uppercase; letter-spacing:.05em; }
   .kpi__val { font-family: var(--f-head); font-size:27px; font-weight:600; margin-top:7px; line-height:1; letter-spacing:-.02em; }
   .kpi__val small { font-size:14px; color: var(--fg-dim); font-weight:500; }
   .kpi__meta { font-size:11.5px; margin-top:6px; color: var(--fg-dim); }
   .kpi__meta.up { color: var(--good); } .kpi__meta.down { color: var(--crit); }
   .kpi.accent { border-top:3px solid var(--brand-red); }
 
-  .grid { display:grid; gap:16px; }
-  .grid--2 { grid-template-columns: 1.4fr 1fr; }
+  .grid { display:grid; gap:16px; } .grid--2 { grid-template-columns: 1.4fr 1fr; }
   .card { background: var(--surface); border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow:hidden; }
   .card__head { display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid var(--line); }
-  .card__head h3 { font-size:14.5px; }
-  .card__head .spacer { flex:1; }
+  .card__head h3 { font-size:14.5px; } .card__head .spacer { flex:1; }
   .card__head .link { font-size:12px; color: var(--brand-red); background:none; border:0; cursor:pointer; font-weight:500; }
-  .card__body { padding:6px 16px 14px; }
-  .card__body.flush { padding:0; }
+  .card__body { padding:6px 16px 14px; } .card__body.flush { padding:0; }
 
   .alert { display:flex; gap:11px; padding:11px 0; border-bottom:1px solid var(--line); align-items:flex-start; }
   .alert:last-child { border-bottom:0; }
   .alert__dot { width:9px; height:9px; border-radius:50%; margin-top:5px; flex:none; }
   .alert__body { flex:1; min-width:0; }
-  .alert__title { font-size:13px; font-weight:500; }
-  .alert__meta { font-size:11.5px; color: var(--fg-dim); margin-top:2px; }
+  .alert__title { font-size:13px; font-weight:500; } .alert__meta { font-size:11.5px; color: var(--fg-dim); margin-top:2px; }
   .alert__act { font-size:12px; color: var(--brand-red); background:none; border:0; cursor:pointer; font-weight:500; padding:4px 0; flex:none; }
 
-  .badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; white-space:nowrap; letter-spacing:.01em; }
+  .badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; white-space:nowrap; }
   .badge .d { width:6px; height:6px; border-radius:50%; background: currentColor; }
-  .b-good { color: var(--good); background: var(--good-bg); }
-  .b-warn { color: var(--warn); background: var(--warn-bg); }
-  .b-crit { color: var(--crit); background: var(--crit-bg); }
-  .b-info { color: var(--info); background: var(--info-bg); }
-  .b-neutral { color: var(--fg-dim); background: var(--surface-2); }
-  .prio-urgent { color:#fff; background: var(--brand-red); }
-  .prio-high { color: var(--crit); background: var(--crit-bg); }
-  .prio-medium { color: var(--warn); background: var(--warn-bg); }
-  .prio-low { color: var(--fg-dim); background: var(--surface-2); }
+  .b-good { color: var(--good); background: var(--good-bg); } .b-warn { color: var(--warn); background: var(--warn-bg); }
+  .b-crit { color: var(--crit); background: var(--crit-bg); } .b-info { color: var(--info); background: var(--info-bg); } .b-neutral { color: var(--fg-dim); background: var(--surface-2); }
+  .prio-urgent { color:#fff; background: var(--brand-red); } .prio-high { color: var(--crit); background: var(--crit-bg); }
+  .prio-medium { color: var(--warn); background: var(--warn-bg); } .prio-low { color: var(--fg-dim); background: var(--surface-2); }
 
   .tablewrap { overflow-x:auto; }
   table.data { width:100%; border-collapse:collapse; font-size:13px; min-width:560px; }
   table.data th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color: var(--fg-dim); font-weight:600; padding:10px 14px; border-bottom:1px solid var(--line); background: var(--surface-2); position:sticky; top:0; }
   table.data td { padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle; }
   table.data tr:last-child td { border-bottom:0; }
-  table.data tr.clickable { cursor:pointer; }
-  table.data tr.clickable:hover td { background: var(--surface-2); }
+  table.data tr.clickable { cursor:pointer; } table.data tr.clickable:hover td { background: var(--surface-2); }
   .cellmuted { color: var(--fg-dim); font-size:12px; }
 
   .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
-  .chipset { display:flex; gap:6px; flex-wrap:wrap; }
+  .chipset { display:flex; gap:6px; flex-wrap:wrap; } .toolbar .spacer { flex:1; }
   .chip { font-size:12.5px; padding:8px 13px; border-radius:20px; border:1px solid var(--line); background: var(--surface); color: var(--fg-dim); cursor:pointer; font-weight:500; }
   .chip.is-on { background: var(--fg); color: var(--surface); border-color: var(--fg); }
-  .toolbar .spacer { flex:1; }
 
   .board { display:grid; grid-template-columns: repeat(3, minmax(230px,1fr)); gap:12px; }
   .board__col { background: var(--surface-2); border:1px solid var(--line); border-radius: var(--radius); display:flex; flex-direction:column; min-height:120px; }
@@ -166,24 +130,17 @@
 
   .detail-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
   .field label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color: var(--fg-dim); } .field .v { font-size:14px; font-weight:500; margin-top:3px; }
-  .timeline { position:relative; padding-left:20px; }
-  .timeline::before { content:""; position:absolute; left:5px; top:4px; bottom:4px; width:2px; background: var(--line); }
-  .tl-item { position:relative; padding:0 0 15px; }
-  .tl-item::before { content:""; position:absolute; left:-18px; top:3px; width:10px; height:10px; border-radius:50%; background: var(--surface); border:2px solid var(--brand-red); }
+  .timeline { position:relative; padding-left:20px; } .timeline::before { content:""; position:absolute; left:5px; top:4px; bottom:4px; width:2px; background: var(--line); }
+  .tl-item { position:relative; padding:0 0 15px; } .tl-item::before { content:""; position:absolute; left:-18px; top:3px; width:10px; height:10px; border-radius:50%; background: var(--surface); border:2px solid var(--brand-red); }
   .tl-date { font-size:11px; color: var(--fg-dim); } .tl-title { font-size:13px; font-weight:500; margin-top:1px; }
-  .comment { display:flex; gap:10px; padding:11px 0; border-bottom:1px solid var(--line); }
-  .comment:last-child { border-bottom:0; }
+  .comment { display:flex; gap:10px; padding:11px 0; border-bottom:1px solid var(--line); } .comment:last-child { border-bottom:0; }
   .comment .avatar { width:26px; height:26px; font-size:10px; }
   .comment__who { font-size:12.5px; font-weight:600; } .comment__who span { color: var(--fg-dim); font-weight:400; font-size:11px; margin-left:6px; }
   .comment__txt { font-size:13px; margin-top:2px; }
 
   .barrow { display:grid; grid-template-columns:120px 1fr 42px; align-items:center; gap:12px; padding:7px 0; }
-  .barrow .nm { font-size:13px; font-weight:500; }
-  .bartrack { background: var(--surface-2); border-radius:6px; height:22px; overflow:hidden; }
-  .barfill { height:100%; background: var(--brand-red); border-radius:6px; }
-  .barrow .vv { font-size:13px; font-weight:600; text-align:right; }
+  .barrow .nm { font-size:13px; font-weight:500; } .bartrack { background: var(--surface-2); border-radius:6px; height:22px; overflow:hidden; } .barfill { height:100%; background: var(--brand-red); border-radius:6px; } .barrow .vv { font-size:13px; font-weight:600; text-align:right; }
 
-  /* Modal */
   .modal-sheet { position:fixed; inset:0; z-index:60; display:flex; align-items:flex-end; justify-content:center; }
   @media (min-width:640px){ .modal-sheet { align-items:center; } }
   .modal-sheet__scrim { position:absolute; inset:0; background: rgba(10,10,12,.5); }
@@ -196,96 +153,86 @@
   .modal__foot { position:sticky; bottom:0; background: var(--surface); display:flex; gap:10px; justify-content:flex-end; padding:14px 18px; border-top:1px solid var(--line); }
   .modal__foot .btn { flex:1; justify-content:center; } @media(min-width:640px){ .modal__foot .btn { flex:none; } }
 
-  .form-row { margin-bottom:13px; }
-  .form-row label.lbl { display:block; font-size:12px; font-weight:600; margin-bottom:5px; }
+  .form-row { margin-bottom:13px; } .form-row label.lbl { display:block; font-size:12px; font-weight:600; margin-bottom:5px; }
   .form-row input, .form-row select, .form-row textarea { width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:8px; background: var(--surface-2); color: var(--fg); font:inherit; outline:none; min-height:42px; }
   .form-row textarea { min-height:auto; }
   .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--brand-red); }
-  .form-2 { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
-  @media(max-width:520px){ .form-2 { grid-template-columns:1fr; } }
-
-  .seg { display:flex; gap:0; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .form-2 { display:grid; grid-template-columns:1fr 1fr; gap:11px; } @media(max-width:520px){ .form-2 { grid-template-columns:1fr; } }
+  .seg { display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
   .seg button { flex:1; padding:10px; background: var(--surface-2); border:0; border-right:1px solid var(--line); color: var(--fg-dim); font:inherit; font-weight:600; cursor:pointer; font-size:13px; }
-  .seg button:last-child { border-right:0; }
-  .seg button.on { background: var(--brand-red); color:#fff; }
-
-  .checks { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  @media(max-width:520px){ .checks { grid-template-columns:1fr; } }
+  .seg button:last-child { border-right:0; } .seg button.on { background: var(--brand-red); color:#fff; }
+  .checks { display:grid; grid-template-columns:1fr 1fr; gap:8px; } @media(max-width:520px){ .checks { grid-template-columns:1fr; } }
   .check { display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px solid var(--line); border-radius:8px; background: var(--surface-2); cursor:pointer; font-size:13px; }
   .check input { width:17px; height:17px; min-height:0; accent-color: var(--brand-red); flex:none; margin:0; }
   .check.on { border-color: var(--brand-red); background: color-mix(in srgb, var(--brand-red) 7%, var(--surface)); }
-
   .inline-note { font-size:12px; background: var(--info-bg); border:1px solid color-mix(in srgb, var(--info) 30%, transparent); color: var(--info); padding:9px 12px; border-radius:8px; display:flex; gap:8px; align-items:flex-start; }
   .inline-note.warn { background: var(--warn-bg); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
   .section-title { font-family: var(--f-head); font-size:13px; text-transform:uppercase; letter-spacing:.05em; color: var(--fg-dim); margin:18px 0 9px; }
   .empty { text-align:center; color: var(--fg-dim); padding:30px 16px; font-size:13px; }
-
-  .pills { display:flex; flex-wrap:wrap; gap:6px; }
-  .pill { font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:20px; background: var(--surface-2); border:1px solid var(--line); color: var(--fg-dim); }
-
+  .pills { display:flex; flex-wrap:wrap; gap:6px; } .pill { font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:20px; background: var(--surface-2); border:1px solid var(--line); color: var(--fg-dim); }
   .photos { display:flex; gap:9px; flex-wrap:wrap; }
   .photo { width:78px; height:78px; border-radius:9px; object-fit:cover; border:1px solid var(--line); background: var(--surface-2); }
   .photo-add { width:78px; height:78px; border-radius:9px; border:1.5px dashed var(--line); background: var(--surface-2); color: var(--fg-dim); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; font-size:11px; }
-
   .sigpad { border:1.5px dashed var(--line); border-radius:10px; background: var(--surface-2); touch-action:none; width:100%; height:150px; display:block; }
   .sig-done { border:1px solid var(--good); border-radius:10px; padding:10px; display:flex; align-items:center; gap:12px; background: var(--good-bg); }
-  .sig-done img { height:60px; background:#fff; border-radius:6px; border:1px solid var(--line); }
 
-  .toast-wrap { position:fixed; z-index:80; left:50%; transform:translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:8px; width:calc(100% - 32px); max-width:380px; pointer-events:none; }
+  .toast-wrap { position:fixed; z-index:80; left:50%; transform:translateX(-50%); bottom:20px; display:flex; flex-direction:column; gap:8px; width:calc(100% - 32px); max-width:380px; pointer-events:none; }
   .toast { background: var(--fg); color: var(--surface); padding:11px 15px; border-radius:10px; font-size:13px; font-weight:500; box-shadow:0 6px 24px rgba(0,0,0,.3); display:flex; align-items:center; gap:9px; }
   .toast .d { width:7px; height:7px; border-radius:50%; background: var(--good); flex:none; }
+
+  /* Login */
+  .login { position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; background: var(--bg); padding:20px; }
+  .login__card { width:100%; max-width:360px; background: var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow: var(--shadow); padding:28px 24px; }
+  .login__brand { display:flex; align-items:center; gap:11px; margin-bottom:22px; }
+  .login h2 { font-size:18px; } .login .sub { font-size:12px; color:var(--fg-dim); }
+  .login__err { font-size:12.5px; color:var(--crit); background:var(--crit-bg); border:1px solid color-mix(in srgb,var(--crit) 30%,transparent); border-radius:8px; padding:9px 11px; margin-bottom:12px; }
+  .login__boot { position:fixed; inset:0; z-index:95; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--fg-dim); font-size:13px; }
 
   .scrim-overlay { display:none; }
   @media (max-width:860px){ .grid--2 { grid-template-columns:1fr; } .board { grid-template-columns:1fr; } }
   @media (max-width:760px){
-    .rail { transform: translateX(-100%); box-shadow:0 0 40px rgba(0,0,0,.4); }
-    .rail.is-open { transform: translateX(0); }
-    .main { margin-left:0; }
-    .hamburger { display:inline-flex; }
+    .rail { transform: translateX(-100%); box-shadow:0 0 40px rgba(0,0,0,.4); } .rail.is-open { transform: translateX(0); }
+    .main { margin-left:0; } .hamburger { display:inline-flex; }
     .scrim-overlay.is-on { display:block; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:35; }
   }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+</head>
+<body>
 
-<div class="app">
+<div class="login__boot" id="bootScreen">Loading…</div>
+
+<div class="login" id="login" hidden>
+  <form class="login__card" id="loginForm">
+    <div class="login__brand"><div class="logo-mark"></div><div><div class="brand-name">Asset&nbsp;Track</div><div class="brand-sub">Back-Office</div></div></div>
+    <h2>Sign in</h2>
+    <div class="sub" style="margin-bottom:18px">Enter your username and password.</div>
+    <div class="login__err" id="loginErr" hidden></div>
+    <div class="form-row"><label class="lbl">Username</label><input id="loginUser" autocomplete="username" placeholder="e.g. mrtiger" autocapitalize="off" autocorrect="off"></div>
+    <div class="form-row"><label class="lbl">Password</label><input id="loginPass" type="password" autocomplete="current-password" placeholder="Your password"></div>
+    <button class="btn btn--primary" id="loginBtn" type="submit" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
+  </form>
+</div>
+
+<div class="app" id="app" hidden>
   <aside class="rail" id="rail">
-    <div class="rail__brand">
-      <div class="logo-mark"></div>
-      <div>
-        <div class="brand-name">Asset&nbsp;Track</div>
-        <div class="brand-sub">Back-Office</div>
-      </div>
-    </div>
+    <div class="rail__brand"><div class="logo-mark"></div><div><div class="brand-name">Asset&nbsp;Track</div><div class="brand-sub">Back-Office</div></div></div>
     <nav class="nav" id="nav"></nav>
     <div class="rail__foot">
-      <div class="viewas">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        Viewing as
-      </div>
-      <div class="viewas-row">
-        <div class="avatar" id="railAvatar">MM</div>
-        <select class="uselect" id="viewAs"></select>
-      </div>
+      <div class="avatar" id="railAvatar">–</div>
+      <div><div class="who" id="railName">—</div><div class="role" id="railRole">—</div></div>
+      <button class="signout" id="signout">Sign out</button>
     </div>
   </aside>
   <div class="scrim-overlay" id="scrim"></div>
-
   <div class="main">
     <header class="topbar">
-      <button class="hamburger" id="burger" aria-label="Menu">
-        <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <div>
-        <div class="crumb" id="crumb">Overview</div>
-        <h1 id="pagetitle">Dashboard</h1>
-      </div>
+      <button class="hamburger" id="burger" aria-label="Menu"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div><div class="crumb" id="crumb">Overview</div><h1 id="pagetitle">Dashboard</h1></div>
       <div class="spacer"></div>
-      <button class="btn btn--primary" id="newbtn">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
-        <span id="newbtnlabel">New task</span>
-      </button>
+      <button class="btn btn--primary" id="newbtn"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg><span id="newbtnlabel">New task</span></button>
     </header>
     <main id="view" class="view"></main>
   </div>
@@ -293,114 +240,87 @@
 
 <div class="toast-wrap" id="toasts"></div>
 
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"></script>
+<script src="js/supabaseClient.js"></script>
 <script>
 (function(){
   "use strict";
-  var LS = "assettrack_proto_v2";
-  var TODAY = "2026-11-10";
+  var API = window.AssetTrackAPI;
+  var EMAIL_DOMAIN = "assettrack.local";          // usernames map to <username>@assettrack.local
+  var TODAY = new Date().toISOString().slice(0,10);
 
   var MODULES = [
-    { id:"dashboard", label:"Dashboard" },
-    { id:"tasks", label:"Tasks" },
-    { id:"installs", label:"Installations" },
-    { id:"clients", label:"Clients" },
-    { id:"inventory", label:"Inventory" },
-    { id:"sims", label:"SIM cards" },
-    { id:"reports", label:"Reports" },
-    { id:"team", label:"Team" }
+    { id:"dashboard", label:"Dashboard" }, { id:"tasks", label:"Tasks" }, { id:"installs", label:"Installations" },
+    { id:"clients", label:"Clients" }, { id:"inventory", label:"Inventory" }, { id:"sims", label:"SIM cards" },
+    { id:"reports", label:"Reports" }, { id:"team", label:"Team" }
   ];
   var ALL_PERMS = MODULES.map(function(m){return m.id;});
 
-  function seed(){
-    return {
-      users: [
-        { id:"u0", name:"Matthew", surname:"Mutepfa", init:"MM", role:"admin", perms:ALL_PERMS.slice() },
-        { id:"t1", name:"Katlao", surname:"Moeng", init:"KM", role:"technician", perms:["dashboard","tasks","installs","inventory","sims"] },
-        { id:"t2", name:"Thabo", surname:"Dube", init:"TD", role:"technician", perms:["dashboard","tasks","installs","inventory"] },
-        { id:"t3", name:"Lesego", surname:"Kgosi", init:"LK", role:"technician", perms:["dashboard","tasks","installs"] }
-      ],
-      clients: [
-        { id:"c1", name:"Paper Group", industry:"Distribution", contact:"Gofaone Seretse", phone:"+267 71 234 567", fleet:14, products:["GPS tracking","Dash cams"], country:"Botswana", expires:"2027-03-01" },
-        { id:"c2", name:"Trans Fridge Botswana", industry:"Cold chain", contact:"Louisa Bernard", phone:"+267 72 118 904", fleet:9, products:["GPS tracking","Temp sensors"], country:"Botswana", expires:"2026-12-15" },
-        { id:"c3", name:"Sefalana Cash & Carry", industry:"Retail logistics", contact:"Oarabile Tau", phone:"+267 71 556 220", fleet:22, products:["GPS tracking"], country:"Botswana", expires:"2027-06-30" },
-        { id:"c4", name:"Kalahari Haulage", industry:"Long-haul freight", contact:"Mpho Radipotsane", phone:"+267 73 902 441", fleet:18, products:["GPS tracking","Diesel tracking"], country:"Botswana", expires:"2026-11-28" },
-        { id:"c5", name:"Choppies Distribution", industry:"Retail logistics", contact:"Neo Baleseng", phone:"+267 71 770 185", fleet:31, products:["GPS tracking","Dash cams"], country:"Botswana", expires:"2027-08-12" }
-      ],
-      tasks: [
-        { id:"k1", title:"Check SD cards — Paper Group fleet", client:"Paper Group", tech:"t1", due:"2026-11-10", status:"open", prio:"high", recurring:"Weekly", comments:[{who:"MM",txt:"Video upload failed on 2 units — dash cam SD cards suspect. Check all 14.",when:"Nov 9, 22:08"}] },
-        { id:"k2", title:"Diesel tracking report review — Kalahari Haulage", client:"Kalahari Haulage", tech:"t2", due:"2026-11-10", status:"in_progress", prio:"medium", recurring:"Weekly", comments:[{who:"TD",txt:"3 vehicles show irregular drops. Flagged for physical inspection.",when:"Nov 10, 08:15"}] },
-        { id:"k3", title:"Temp sensor inspection — Trans Fridge", client:"Trans Fridge Botswana", tech:"t1", due:"2026-11-11", status:"open", prio:"medium", recurring:"Monthly", comments:[] },
-        { id:"k4", title:"Investigate offline tracker — B 418 CJQ", client:"Choppies Distribution", tech:"t3", due:"2026-11-10", status:"open", prio:"urgent", recurring:null, comments:[{who:"System",txt:"SIM 8926…4471 — no data for 31 hours.",when:"Nov 10, 06:00"}] },
-        { id:"k5", title:"Fuel sensor verification — Sefalana", client:"Sefalana Cash & Carry", tech:"t2", due:"2026-11-08", status:"open", prio:"high", recurring:"Monthly", comments:[] },
-        { id:"k6", title:"Replace Eye Sensor battery units — Trans Fridge", client:"Trans Fridge Botswana", tech:"t1", due:"2026-11-14", status:"open", prio:"low", recurring:null, comments:[] },
-        { id:"k7", title:"SD card audit — Choppies fleet", client:"Choppies Distribution", tech:"t3", due:"2026-11-07", status:"done", prio:"medium", recurring:"Weekly", comments:[{who:"LK",txt:"Checked 31 units. Replaced SD cards on vehicles 4, 19, 27.",when:"Nov 7, 15:40"}] }
-      ],
-      installs: [
-        { id:"i1", ref:"INS-2041", client:"Sefalana Cash & Carry", contact:"Oarabile Tau", phone:"+267 71 556 220", vehicle:"B 902 DLR", type:"New install", date:"2026-11-10", time:"09:00", loc:"Sefalana DC, Broadhurst", tech:"t2", status:"scheduled", photos:0, signed:false },
-        { id:"i2", ref:"INS-2042", client:"Kalahari Haulage", contact:"Mpho Radipotsane", phone:"+267 73 902 441", vehicle:"B 771 AQP", type:"Diesel sensor", date:"2026-11-10", time:"13:30", loc:"Kalahari yard, Gaborone West", tech:"t2", status:"in_progress", photos:2, signed:false },
-        { id:"i3", ref:"INS-2043", client:"Paper Group", contact:"Gofaone Seretse", phone:"+267 71 234 567", vehicle:"B 155 CKT", type:"Dash cam", date:"2026-11-11", time:"10:00", loc:"Paper Group yard, Gabane", tech:"t1", status:"scheduled", photos:0, signed:false },
-        { id:"i4", ref:"INS-2039", client:"Choppies Distribution", contact:"Neo Baleseng", phone:"+267 71 770 185", vehicle:"B 418 CJQ", type:"Unit swap", date:"2026-11-09", time:"11:00", loc:"Choppies DC, Phakalane", tech:"t3", status:"completed", photos:3, signed:true },
-        { id:"i5", ref:"INS-2038", client:"Trans Fridge Botswana", contact:"Louisa Bernard", phone:"+267 72 118 904", vehicle:"B 330 BRM", type:"Temp sensor", date:"2026-11-08", time:"14:00", loc:"Trans Fridge depot, Content", tech:"t1", status:"completed", photos:4, signed:true }
-      ],
-      inventory: [
-        { id:"v1", item:"Teltonika FMB920 GPS tracker", sku:"FMB920", cat:"Tracker", instock:12, min:10, damaged:1, moves:[{who:"LK",client:"Choppies Distribution",qty:5,purpose:"Install",date:"Nov 9",dir:"out"},{who:"KM",client:"Paper Group",qty:2,purpose:"Install",date:"Nov 7",dir:"out"}] },
-        { id:"v2", item:"Teltonika Eye Sensor (BLE temp)", sku:"EYE-T", cat:"Sensor", instock:7, min:8, damaged:0, moves:[{who:"KM",client:"Trans Fridge Botswana",qty:3,purpose:"Install",date:"Nov 8",dir:"out"}] },
-        { id:"v3", item:"Dash cam unit", sku:"DC-2", cat:"Dash cam", instock:5, min:6, damaged:2, moves:[{who:"KM",client:"Paper Group",qty:1,purpose:"Swap",date:"Nov 9",dir:"out"}] },
-        { id:"v4", item:"MicroSD card 128GB", sku:"SD-128", cat:"SD card", instock:8, min:15, damaged:3, moves:[{who:"LK",client:"Choppies Distribution",qty:3,purpose:"Replacement",date:"Nov 7",dir:"out"}] },
-        { id:"v5", item:"Fuel level sensor", sku:"FLS-1", cat:"Fuel sensor", instock:19, min:8, damaged:0, moves:[] },
-        { id:"v6", item:"Wiring harness kit", sku:"WH-K", cat:"Harness", instock:24, min:10, damaged:0, moves:[{who:"TD",client:"Kalahari Haulage",qty:2,purpose:"Install",date:"Nov 10",dir:"out"}] },
-        { id:"v7", item:"SIM card (data)", sku:"SIM-D", cat:"SIM", instock:34, min:20, damaged:0, moves:[] },
-        { id:"v8", item:"Insulation tape (roll)", sku:"CON-TAPE", cat:"Consumable", instock:40, min:20, damaged:0, moves:[{who:"TD",client:"Kalahari Haulage",qty:4,purpose:"Install",date:"Nov 10",dir:"out"}] },
-        { id:"v9", item:"Digital multimeter", sku:"TOOL-MM", cat:"Consumable", instock:3, min:3, damaged:1, moves:[] }
-      ],
-      sims: [
-        { id:"s1", iccid:"8926 0113 4471", msisdn:"+267 76 004 471", vehicle:"B 418 CJQ", client:"Choppies Distribution", net:"Orange", status:"offline", lastseen:"31h ago", data:"0 MB" },
-        { id:"s2", iccid:"8926 0113 9920", msisdn:"+267 76 009 920", vehicle:"B 902 DLR", client:"Sefalana Cash & Carry", net:"Mascom", status:"active", lastseen:"2m ago", data:"41 MB" },
-        { id:"s3", iccid:"8926 0114 1185", msisdn:"+267 76 011 185", vehicle:"B 771 AQP", client:"Kalahari Haulage", net:"Orange", status:"active", lastseen:"1m ago", data:"58 MB" },
-        { id:"s4", iccid:"8926 0112 7733", msisdn:"+267 76 007 733", vehicle:"B 330 BRM", client:"Trans Fridge Botswana", net:"Mascom", status:"active", lastseen:"4m ago", data:"33 MB" },
-        { id:"s5", iccid:"8926 0115 6602", msisdn:"+267 76 056 602", vehicle:"B 155 CKT", client:"Paper Group", net:"Orange", status:"high", lastseen:"1m ago", data:"186 MB" },
-        { id:"s6", iccid:"8926 0113 2208", msisdn:"+267 76 032 208", vehicle:"B 640 AFN", client:"Paper Group", net:"Mascom", status:"active", lastseen:"3m ago", data:"29 MB" }
-      ],
-      currentUser: "u0"
-    };
-  }
+  var INSTALL_TYPES = [["new_install","New install"],["dash_cam","Dash cam"],["temp_sensor","Temp sensor"],["diesel_sensor","Diesel sensor"],["unit_swap","Unit swap"],["removal","Removal"],["maintenance","Maintenance"]];
+  var INSTALL_LABEL = {}; var INSTALL_ENUM = {}; INSTALL_TYPES.forEach(function(p){ INSTALL_LABEL[p[0]]=p[1]; INSTALL_ENUM[p[1]]=p[0]; });
+  var CATS = [["tracker","Tracker"],["sensor","Sensor"],["dash_cam","Dash cam"],["sd_card","SD card"],["fuel_sensor","Fuel sensor"],["harness","Harness"],["sim","SIM"],["consumable","Consumable"],["other","Other"]];
+  var CAT_LABEL = {}; var CAT_ENUM = {}; CATS.forEach(function(p){ CAT_LABEL[p[0]]=p[1]; CAT_ENUM[p[1]]=p[0]; });
+  var STATUS_LABEL = { open:"Open", in_progress:"In progress", done:"Completed", scheduled:"Scheduled", completed:"Completed" };
 
-  var db;
-  try { var raw = localStorage.getItem(LS); db = raw ? JSON.parse(raw) : seed(); }
-  catch(e){ db = seed(); }
-  // persist without large image blobs
-  function save(){ try { localStorage.setItem(LS, JSON.stringify(db)); } catch(e){} }
+  var db = { users:[], clients:[], vehicles:[], sims:[], tasks:[], installs:[], inventory:[], currentUser:null };
+  var clientIdByName = {}, clientNameById = {}, vehicleRegById = {};
 
-  /* Helpers */
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); };
   function user(id){ return db.users.find(function(u){return u.id===id;}); }
-  function uName(id){ var u=user(id); return u?u.name+" "+u.surname:"Unassigned"; }
+  function uName(id){ var u=user(id); return u?(u.name+" "+u.surname).trim():"Unassigned"; }
   function uFirst(id){ var u=user(id); return u?u.name:"Unassigned"; }
   function uInit(id){ var u=user(id); return u?u.init:"—"; }
   function cur(){ return user(db.currentUser); }
   function can(mod){ var u=cur(); return u && u.perms.indexOf(mod)>=0; }
-  function isOverdue(t){ return t.status!=="done" && t.due<TODAY; }
-  function uid(p){ return p+Math.random().toString(36).slice(2,7); }
-  var STATUS_LABEL = { open:"Open", in_progress:"In progress", done:"Completed", scheduled:"Scheduled", completed:"Completed" };
+  function isOverdue(t){ return t.status!=="done" && t.due && t.due<TODAY; }
+  function cap(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):s; }
+  function rel(ts){ if(!ts) return "—"; var d=(Date.now()-new Date(ts).getTime())/1000; if(d<90)return"just now"; if(d<3600)return Math.round(d/60)+"m ago"; if(d<86400)return Math.round(d/3600)+"h ago"; return Math.round(d/86400)+"d ago"; }
+  function fmtDate(ts){ if(!ts) return ""; try { return new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric"}); } catch(e){ return String(ts).slice(0,10); } }
 
-  function taskStatusBadge(t){
-    if(isOverdue(t)) return '<span class="badge b-crit"><span class="d"></span>Overdue</span>';
-    if(t.status==="done") return '<span class="badge b-good"><span class="d"></span>Completed</span>';
-    if(t.status==="in_progress") return '<span class="badge b-warn"><span class="d"></span>In progress</span>';
-    return '<span class="badge b-info"><span class="d"></span>Open</span>';
+  /* ---------------- Load & map ---------------- */
+  function mapAll(raw){
+    db.clients = (raw.clients||[]).map(function(c){ return { id:c.id, name:c.name, industry:c.industry||"—", contact:c.contact_name||"—", phone:c.contact_phone||"—", fleet:c.fleet_size||0, products:c.products||[], expires:c.contract_expires||"—" }; });
+    clientIdByName={}; clientNameById={};
+    db.clients.forEach(function(c){ clientIdByName[c.name]=c.id; clientNameById[c.id]=c.name; });
+    db.vehicles = (raw.vehicles||[]);
+    vehicleRegById={}; db.vehicles.forEach(function(v){ vehicleRegById[v.id]=v.registration; });
+    db.users = (raw.profiles||[]).map(function(p){ return { id:p.id, name:p.first_name||"", surname:p.last_name||"", init:p.initials||"U", role:p.role, perms:p.module_access||[], phone:p.phone }; });
+
+    var commentsByTask={};
+    (raw.task_comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1;}).forEach(function(c){
+      (commentsByTask[c.task_id]=commentsByTask[c.task_id]||[]).push({ who:(user(c.author_id)||{}).init||"·", txt:c.body, when:fmtDate(c.created_at) });
+    });
+    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:clientNameById[t.client_id]||"—", tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, comments:commentsByTask[t.id]||[] }; });
+
+    db.installs = (raw.installations||[]).map(function(i){ return { id:i.id, ref:i.ref, client:clientNameById[i.client_id]||i.vehicle_reg||"—", contact:i.contact_name||"—", phone:i.contact_phone||"—", vehicle:i.vehicle_reg||(vehicleRegById[i.vehicle_id]||"—"), type:INSTALL_LABEL[i.job_type]||i.job_type, date:i.scheduled_date||"", time:(i.scheduled_time||"").slice(0,5), loc:i.location||"—", tech:i.assigned_to, status:i.status, photos:0, signed:!!i.signed }; });
+
+    var movesByItem={};
+    (raw.stock_movements||[]).slice().sort(function(a,b){return a.created_at<b.created_at?1:-1;}).forEach(function(m){
+      (movesByItem[m.item_id]=movesByItem[m.item_id]||[]).push({ who:(user(m.performed_by)||{}).init||"·", client:clientNameById[m.client_id]||"—", qty:m.quantity, purpose:m.purpose||"—", date:fmtDate(m.created_at), dir:m.movement_type });
+    });
+    db.inventory = (raw.inventory_items||[]).map(function(v){ return { id:v.id, item:v.name, sku:v.sku||"—", cat:CAT_LABEL[v.category]||v.category, instock:v.in_stock, min:v.min_level, damaged:v.damaged, moves:movesByItem[v.id]||[] }; });
+
+    db.sims = (raw.sims||[]).map(function(s){ var st = s.state==="offline"?"offline":((s.data_today_mb||0)>150?"high":"active"); return { id:s.id, iccid:s.iccid, msisdn:s.msisdn||"—", vehicle:vehicleRegById[s.vehicle_id]||"—", client:clientNameById[s.client_id]||"—", net:s.network||"—", status:st, lastseen:rel(s.last_seen), data:(s.data_today_mb||0)+" MB" }; });
   }
-  function prioBadge(p){ return '<span class="badge prio-'+p+'">'+p.charAt(0).toUpperCase()+p.slice(1)+'</span>'; }
-  function simBadge(s){ if(s==="offline")return '<span class="badge b-crit"><span class="d"></span>Offline</span>'; if(s==="high")return '<span class="badge b-warn"><span class="d"></span>High usage</span>'; return '<span class="badge b-good"><span class="d"></span>Active</span>'; }
-  function field(l,v){ return '<div class="field"><label>'+esc(l)+'</label><div class="v">'+esc(v)+'</div></div>'; }
 
-  /* Nav */
-  var NAV_GROUPS = [
-    { label:"Overview", items:["dashboard"] },
-    { label:"Operations", items:["tasks","installs","clients"] },
-    { label:"Assets", items:["inventory","sims"] },
-    { label:"Insight", items:["reports"] },
-    { label:"Admin", items:["team"] }
-  ];
+  /* ---------------- Persist (write-through) ---------------- */
+  function warn(r, msg){ if(r && r.error){ console.error(r.error); toast((msg||"Save failed")+": "+r.error.message); return false; } return true; }
+  var P = {
+    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")) return r.data; return null; },
+    updateTask: async function(id,patch){ warn(await API.updateTask(id,patch),"Couldn't update task"); },
+    reassign: async function(id,tech){ warn(await API.reassignTask(id,tech),"Couldn't reassign"); },
+    addComment: async function(taskId,body){ var r=await API.addComment({ task_id:taskId, author_id:db.currentUser, body:body }); warn(r,"Couldn't add comment"); return r.data; },
+    createInstall: async function(a){ var r=await API.createInstall({ ref:a.ref, client_id:clientIdByName[a.client]||null, vehicle_reg:a.vehicle, contact_name:a.contact, contact_phone:a.phone, job_type:INSTALL_ENUM[a.type]||"new_install", scheduled_date:a.date||null, scheduled_time:a.time||null, location:a.loc, assigned_to:a.tech, status:"scheduled", created_by:db.currentUser }); if(warn(r,"Couldn't schedule installation")) return r.data; return null; },
+    updateInstall: async function(id,patch){ warn(await API.updateInstall(id,patch),"Couldn't update installation"); },
+    createClient: async function(a){ var r=await API.createClient({ name:a.name, industry:a.industry, contact_name:a.contact, contact_phone:a.phone, fleet_size:a.fleet, products:a.products, created_by:db.currentUser }); if(warn(r,"Couldn't add client")){ clientIdByName[a.name]=r.data.id; clientNameById[r.data.id]=a.name; return r.data; } return null; },
+    moveStock: async function(itemId,type,qty,clientName,purpose,note){ warn(await API.moveStock({ item_id:itemId, movement_type:type, quantity:qty, client_id:clientIdByName[clientName]||null, performed_by:db.currentUser, purpose:purpose, note:note||null }),"Couldn't record movement"); },
+    createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
+    updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); }
+  };
+
+  /* ---------------- Nav ---------------- */
+  var NAV_GROUPS = [ { label:"Overview", items:["dashboard"] }, { label:"Operations", items:["tasks","installs","clients"] }, { label:"Assets", items:["inventory","sims"] }, { label:"Insight", items:["reports"] }, { label:"Admin", items:["team"] } ];
   var NAV_ICON = {
     dashboard:'<path d="M3 13h8V3H3zM13 21h8V8h-8zM3 21h8v-6H3zM13 3v3h8V3z"/>',
     tasks:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
@@ -412,92 +332,61 @@
     team:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
   };
   var counts = {};
-  function recount(){
-    counts.tasks = db.tasks.filter(function(t){return t.status!=="done";}).length;
-    counts.installs = db.installs.filter(function(i){return i.status!=="completed";}).length;
-    counts.sims = db.sims.filter(function(s){return s.status==="offline";}).length;
-    counts.team = db.users.length;
-  }
+  function recount(){ counts.tasks=db.tasks.filter(function(t){return t.status!=="done";}).length; counts.installs=db.installs.filter(function(i){return i.status!=="completed";}).length; counts.sims=db.sims.filter(function(s){return s.status==="offline";}).length; counts.team=db.users.length; }
   function renderNav(){
-    recount();
-    var html="";
-    NAV_GROUPS.forEach(function(g){
-      var items = g.items.filter(function(id){ return can(id); });
-      if(!items.length) return;
-      html += '<div class="nav__label">'+g.label+'</div>';
-      items.forEach(function(id){
-        var m = MODULES.find(function(x){return x.id===id;});
-        var ct = counts[id];
-        html += '<button class="nav__item'+(id===route?' is-active':'')+'" data-nav="'+id+'">'
-          + '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICON[id]+'</svg>'
-          + '<span>'+m.label+'</span>'
-          + (ct?'<span class="ct">'+ct+'</span>':'')
-          + '</button>';
+    recount(); var html="";
+    NAV_GROUPS.forEach(function(g){ var items=g.items.filter(function(id){return can(id);}); if(!items.length)return; html+='<div class="nav__label">'+g.label+'</div>';
+      items.forEach(function(id){ var m=MODULES.find(function(x){return x.id===id;}); var ct=counts[id];
+        html+='<button class="nav__item'+(id===route?' is-active':'')+'" data-nav="'+id+'"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICON[id]+'</svg><span>'+m.label+'</span>'+(ct?'<span class="ct">'+ct+'</span>':'')+'</button>';
       });
     });
-    document.getElementById("nav").innerHTML = html;
+    document.getElementById("nav").innerHTML=html;
   }
-  function renderViewAs(){
-    var sel = document.getElementById("viewAs");
-    sel.innerHTML = db.users.map(function(u){ return '<option value="'+u.id+'"'+(u.id===db.currentUser?' selected':'')+'>'+esc(u.name+" "+u.surname)+(u.role==="admin"?" · Admin":" · Tech")+'</option>'; }).join('');
-    document.getElementById("railAvatar").textContent = cur().init;
-  }
+  function renderUser(){ var u=cur(); document.getElementById("railAvatar").textContent=u.init; document.getElementById("railName").textContent=(u.name+" "+u.surname).trim(); document.getElementById("railRole").textContent=(u.role==="admin"?"Admin":"Technician")+" · Gaborone"; }
 
-  /* Toast */
-  function toast(msg){
-    var w=document.getElementById("toasts"); var el=document.createElement("div"); el.className="toast";
-    el.innerHTML='<span class="d"></span>'+esc(msg); w.appendChild(el);
-    setTimeout(function(){ el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(function(){el.remove();},300); }, 2800);
-  }
+  function toast(msg){ var w=document.getElementById("toasts"); var el=document.createElement("div"); el.className="toast"; el.innerHTML='<span class="d"></span>'+esc(msg); w.appendChild(el); setTimeout(function(){ el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(function(){el.remove();},300); }, 2800); }
 
   var view = document.getElementById("view");
   var route = "dashboard";
   var PAGE = {
-    dashboard:{t:"Dashboard",c:"Overview",btn:"New task",fn:function(){ if(can('tasks')) openTaskForm(); else toast("No access"); }},
+    dashboard:{t:"Dashboard",c:"Overview",btn:"New task",fn:function(){ if(can('tasks')) openTaskForm(); }},
     tasks:{t:"Tasks",c:"Operations",btn:"New task",fn:function(){ openTaskForm(); }},
     installs:{t:"Installations",c:"Operations",btn:"New installation",fn:function(){ openInstallForm(); }},
     clients:{t:"Clients",c:"Operations",btn:"New client",fn:function(){ openClientForm(); }},
     inventory:{t:"Inventory",c:"Assets",btn:"Add item",fn:function(){ openItemForm(); }},
-    sims:{t:"SIM cards",c:"Assets",btn:"Sync portal",fn:function(){ toast("Pulling status from SIM portal API…"); }},
-    reports:{t:"Reports",c:"Insight",btn:"Export",fn:function(){ toast("Report export — prototype stub"); }},
+    sims:{t:"SIM cards",c:"Assets",btn:"Sync portal",fn:function(){ toast("SIM sync runs server-side (1oT API) — wiring next."); }},
+    reports:{t:"Reports",c:"Insight",btn:"Export",fn:function(){ toast("Report export — coming soon"); }},
     team:{t:"Team",c:"Admin",btn:"New user",fn:function(){ openUserForm(); }}
   };
-
-  function go(r){
-    if(!can(r)){ r = cur().perms[0] || "dashboard"; }
-    route=r; var p=PAGE[r];
-    document.getElementById("pagetitle").textContent=p.t;
-    document.getElementById("crumb").textContent=p.c;
-    document.getElementById("newbtnlabel").textContent=p.btn;
-    document.getElementById("newbtn").style.display = (r==="sims") ? "none" : "";
+  function go(r){ if(!can(r)){ r=cur().perms[0]||"dashboard"; } route=r; var p=PAGE[r];
+    document.getElementById("pagetitle").textContent=p.t; document.getElementById("crumb").textContent=p.c; document.getElementById("newbtnlabel").textContent=p.btn;
+    document.getElementById("newbtn").style.display=(r==="sims"||r==="reports")?"none":"";
     renderNav(); render(); closeRail(); window.scrollTo(0,0);
   }
-  document.getElementById("newbtn").onclick=function(){ PAGE[route].fn(); };
+  function render(){ ({ dashboard:renderDashboard, tasks:renderTasks, installs:renderInstalls, clients:renderClients, inventory:renderInventory, sims:renderSims, reports:renderReports, team:renderTeam }[route])(); }
 
-  function render(){
-    ({ dashboard:renderDashboard, tasks:renderTasks, installs:renderInstalls, clients:renderClients, inventory:renderInventory, sims:renderSims, reports:renderReports, team:renderTeam }[route])();
-  }
+  function taskStatusBadge(t){ if(isOverdue(t))return '<span class="badge b-crit"><span class="d"></span>Overdue</span>'; if(t.status==="done")return '<span class="badge b-good"><span class="d"></span>Completed</span>'; if(t.status==="in_progress")return '<span class="badge b-warn"><span class="d"></span>In progress</span>'; return '<span class="badge b-info"><span class="d"></span>Open</span>'; }
+  function prioBadge(p){ return '<span class="badge prio-'+p+'">'+cap(p)+'</span>'; }
+  function simBadge(s){ if(s==="offline")return '<span class="badge b-crit"><span class="d"></span>Offline</span>'; if(s==="high")return '<span class="badge b-warn"><span class="d"></span>High usage</span>'; return '<span class="badge b-good"><span class="d"></span>Active</span>'; }
+  function field(l,v){ return '<div class="field"><label>'+esc(l)+'</label><div class="v">'+esc(v)+'</div></div>'; }
+  function kpi(label,val,unit,meta,accent){ return '<div class="kpi'+(accent?' accent':'')+'"><div class="kpi__label">'+esc(label)+'</div><div class="kpi__val tnum">'+val+(unit?'<small>'+unit+'</small>':'')+'</div><div class="kpi__meta">'+meta+'</div></div>'; }
 
-  /* ---- Dashboard ---- */
+  /* ---------------- Dashboard ---------------- */
   function renderDashboard(){
-    var me = db.currentUser;
-    var myTasks = db.tasks.filter(function(t){ return t.tech===me && t.status!=="done"; });
+    var me=db.currentUser, isAdmin=cur().role==="admin";
+    var myTasks=db.tasks.filter(function(t){return t.tech===me&&t.status!=="done";});
     var openT=db.tasks.filter(function(t){return t.status!=="done";}).length;
     var overdue=db.tasks.filter(isOverdue).length;
     var installsWk=db.installs.filter(function(i){return i.status!=="completed";}).length;
     var simsOff=db.sims.filter(function(s){return s.status==="offline";}).length;
-    var totalSims=db.sims.length; var onlinePct=Math.round((totalSims-simsOff)/totalSims*100);
+    var onlinePct=db.sims.length?Math.round((db.sims.length-simsOff)/db.sims.length*100):100;
     var totalVehicles=db.clients.reduce(function(a,c){return a+(c.fleet||0);},0);
     var lowStock=db.inventory.filter(function(v){return v.instock<v.min;}).length;
-
-    var alerts=[];
-    db.sims.filter(function(s){return s.status==="offline";}).forEach(function(s){ alerts.push({c:"var(--crit)",t:"SIM offline — "+s.vehicle+" ("+s.client+")",m:"No data for "+s.lastseen+" · ICCID "+s.iccid,act:"Create task",fn:function(){ quickOfflineTask(s); }}); });
-    db.inventory.filter(function(v){return v.instock<v.min;}).forEach(function(v){ alerts.push({c:"var(--warn)",t:"Low stock — "+v.item,m:v.instock+" in stock · minimum "+v.min,act:"View",fn:function(){ go("inventory"); }}); });
-    db.clients.filter(function(c){return c.expires<"2026-12-01";}).forEach(function(c){ alerts.push({c:"var(--info)",t:"Contract expiring — "+c.name,m:"Renews "+c.expires,act:"View",fn:function(){ openClient(c.id); }}); });
-    db.tasks.filter(isOverdue).forEach(function(t){ alerts.push({c:"var(--crit)",t:"Task overdue — "+t.title,m:"Due "+t.due+" · "+uFirst(t.tech),act:"Open",fn:function(){ openTask(t.id); }}); });
-
     var todays=db.installs.filter(function(i){return i.date===TODAY;});
-    var isAdmin = cur().role==="admin";
+    var alerts=[];
+    db.sims.filter(function(s){return s.status==="offline";}).forEach(function(s){ alerts.push({c:"var(--crit)",t:"SIM offline — "+s.vehicle+" ("+s.client+")",m:"No data for "+s.lastseen+" · "+s.iccid,act:"Create task",fn:function(){ quickOfflineTask(s); }}); });
+    db.inventory.filter(function(v){return v.instock<v.min;}).forEach(function(v){ alerts.push({c:"var(--warn)",t:"Low stock — "+v.item,m:v.instock+" in stock · minimum "+v.min,act:"View",fn:function(){ go("inventory"); }}); });
+    db.tasks.filter(isOverdue).forEach(function(t){ alerts.push({c:"var(--crit)",t:"Task overdue — "+t.title,m:"Due "+t.due+" · "+uFirst(t.tech),act:"Open",fn:function(){ openTask(t.id); }}); });
 
     var html='<div class="kpis">'
       +kpi("Open tasks",openT,'',overdue?('<span class="down">'+overdue+' overdue</span>'):'All on schedule',true)
@@ -506,242 +395,166 @@
       +kpi("Fleet online",onlinePct,'%',simsOff+" offline")
       +kpi("Low stock",lowStock,'',lowStock?'<span class="down">Reorder due</span>':'Stock healthy')
       +kpi("SLA compliance",96,'%','<span class="up">+2 vs last mo</span>')
-    +'</div>'
-    +'<div class="grid grid--2">'
-      +'<div class="card">'
-        +'<div class="card__head"><h3>'+(isAdmin?'All open tasks':'My tasks')+'</h3><div class="spacer"></div><span class="badge b-neutral">'+(isAdmin?openT:myTasks.length)+'</span></div>'
-        +'<div class="card__body">'+ ((isAdmin?db.tasks.filter(function(t){return t.status!=="done";}):myTasks).slice(0,6).map(function(t){
-            return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span>'
-              +'<div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+' · due '+esc(t.due)+(isAdmin?' · '+esc(uFirst(t.tech)):'')+'</div></div>'+prioBadge(t.prio)+'</div>';
-          }).join('') || '<div class="empty">Nothing assigned to you</div>') +'</div>'
-      +'</div>'
-      +'<div class="card">'
-        +'<div class="card__head"><h3>Today’s schedule</h3><div class="spacer"></div>'+(can('installs')?'<button class="link" data-nav="installs">Board</button>':'')+'</div>'
-        +'<div class="card__body">'+ (todays.length? todays.map(function(i){
-            return '<div class="alert" style="cursor:pointer" data-openinstall="'+i.id+'"><span class="alert__dot" style="background:'+(i.status==="completed"?'var(--good)':i.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span>'
-              +'<div class="alert__body"><div class="alert__title">'+esc(i.time)+' · '+esc(i.client)+'</div><div class="alert__meta">'+esc(i.type)+' · '+esc(i.loc)+' · '+uInit(i.tech)+'</div></div></div>';
-          }).join('') : '<div class="empty">Nothing scheduled today</div>') +'</div>'
-      +'</div>'
-    +'</div>'
-    + (can('sims')||cur().role==="admin" ? '<div class="card" style="margin-top:16px"><div class="card__head"><h3>Alerts</h3><div class="spacer"></div><span class="badge b-neutral">'+alerts.length+' active</span></div>'
-        +'<div class="card__body">'+ (alerts.length? alerts.map(function(a,idx){ return '<div class="alert"><span class="alert__dot" style="background:'+a.c+'"></span><div class="alert__body"><div class="alert__title">'+esc(a.t)+'</div><div class="alert__meta">'+esc(a.m)+'</div></div><button class="alert__act" data-alert="'+idx+'">'+esc(a.act)+'</button></div>'; }).join('') : '<div class="empty">No active alerts</div>')+'</div></div>' : '');
-
+    +'</div><div class="grid grid--2">'
+      +'<div class="card"><div class="card__head"><h3>'+(isAdmin?'All open tasks':'My tasks')+'</h3><div class="spacer"></div><span class="badge b-neutral">'+(isAdmin?openT:myTasks.length)+'</span></div><div class="card__body">'
+      + ((isAdmin?db.tasks.filter(function(t){return t.status!=="done";}):myTasks).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+(isAdmin?' · '+esc(uFirst(t.tech)):'')+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">Nothing assigned to you</div>')
+      +'</div></div><div class="card"><div class="card__head"><h3>Today’s schedule</h3><div class="spacer"></div>'+(can('installs')?'<button class="link" data-nav="installs">Board</button>':'')+'</div><div class="card__body">'
+      + (todays.length? todays.map(function(i){ return '<div class="alert" style="cursor:pointer" data-openinstall="'+i.id+'"><span class="alert__dot" style="background:'+(i.status==="completed"?'var(--good)':i.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(i.time)+' · '+esc(i.client)+'</div><div class="alert__meta">'+esc(i.type)+' · '+esc(i.loc)+' · '+uInit(i.tech)+'</div></div></div>'; }).join('') : '<div class="empty">Nothing scheduled today</div>')
+      +'</div></div></div>'
+      +'<div class="card" style="margin-top:16px"><div class="card__head"><h3>Alerts</h3><div class="spacer"></div><span class="badge b-neutral">'+alerts.length+' active</span></div><div class="card__body">'
+      + (alerts.length? alerts.map(function(a,idx){ return '<div class="alert"><span class="alert__dot" style="background:'+a.c+'"></span><div class="alert__body"><div class="alert__title">'+esc(a.t)+'</div><div class="alert__meta">'+esc(a.m)+'</div></div><button class="alert__act" data-alert="'+idx+'">'+esc(a.act)+'</button></div>'; }).join('') : '<div class="empty">No active alerts</div>')
+      +'</div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-alert]").forEach(function(b){ b.onclick=function(){ alerts[+b.dataset.alert].fn(); }; });
     view.querySelectorAll("[data-opentask]").forEach(function(b){ b.onclick=function(){ openTask(b.dataset.opentask); }; });
     view.querySelectorAll("[data-openinstall]").forEach(function(b){ b.onclick=function(){ openInstall(b.dataset.openinstall); }; });
     view.querySelectorAll("[data-nav]").forEach(function(b){ b.onclick=function(){ go(b.dataset.nav); }; });
   }
-  function kpi(label,val,unit,meta,accent){ return '<div class="kpi'+(accent?' accent':'')+'"><div class="kpi__label">'+esc(label)+'</div><div class="kpi__val tnum">'+val+(unit?'<small>'+unit+'</small>':'')+'</div><div class="kpi__meta">'+meta+'</div></div>'; }
 
-  /* ---- Tasks ---- */
+  /* ---------------- Tasks ---------------- */
   var taskFilter="all";
   function renderTasks(){
     var me=db.currentUser, isAdmin=cur().role==="admin";
     var filters=[["all","All"],["open","Open"],["in_progress","In progress"],["overdue","Overdue"],["done","Completed"]];
-    var list=db.tasks.slice().sort(function(a,b){return a.due<b.due?-1:1;});
+    var list=db.tasks.slice().sort(function(a,b){return (a.due||"")<(b.due||"")?-1:1;});
     if(!isAdmin) list=list.filter(function(t){return t.tech===me;});
-    if(taskFilter==="overdue") list=list.filter(isOverdue);
-    else if(taskFilter!=="all") list=list.filter(function(t){return t.status===taskFilter;});
-
-    var html='<div class="toolbar"><div class="chipset">'
-      +filters.map(function(f){return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+'</button>';}).join('')
-      +'</div></div>'
-      + (isAdmin?'':'<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>You’re viewing as a technician — only tasks assigned to you are shown.</span></div>')
-      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data">'
-      +'<thead><tr><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
+    if(taskFilter==="overdue") list=list.filter(isOverdue); else if(taskFilter!=="all") list=list.filter(function(t){return t.status===taskFilter;});
+    var html='<div class="toolbar"><div class="chipset">'+filters.map(function(f){return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div></div>'
+      +(isAdmin?'':'<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>You only see tasks assigned to you.</span></div>')
+      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
     if(!list.length) html+='<tr><td colspan="6"><div class="empty">No tasks in this view</div></td></tr>';
-    list.forEach(function(t){
-      html+='<tr class="clickable" data-task="'+t.id+'"><td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off')+'</div></td>'
-        +'<td>'+esc(t.client)+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due)+'</td><td>'+prioBadge(t.prio)+'</td><td>'+taskStatusBadge(t)+'</td></tr>';
-    });
+    list.forEach(function(t){ html+='<tr class="clickable" data-task="'+t.id+'"><td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off')+'</div></td><td>'+esc(t.client)+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due||"—")+'</td><td>'+prioBadge(t.prio)+'</td><td>'+taskStatusBadge(t)+'</td></tr>'; });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-tf]").forEach(function(b){ b.onclick=function(){ taskFilter=b.dataset.tf; renderTasks(); }; });
     view.querySelectorAll("[data-task]").forEach(function(r){ r.onclick=function(){ openTask(r.dataset.task); }; });
   }
-
   function openTask(id){
-    var t=db.tasks.find(function(x){return x.id===id;}); if(!t) return;
-    var isAdmin=cur().role==="admin";
-    var body='<div class="detail-grid" style="margin-bottom:16px">'
-      +field("Client",t.client)+field("Assigned to",uName(t.tech))+field("Due date",t.due)+field("Recurring",t.recurring||"One-off")
-      +'<div class="field"><label>Priority</label><div class="v">'+prioBadge(t.prio)+'</div></div></div>'
-      +'<div class="form-2">'
-        +'<div class="form-row"><label class="lbl">Status</label><select id="t-status">'+['open','in_progress','done'].map(function(s){return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+STATUS_LABEL[s]+'</option>';}).join('')+'</select></div>'
-        +'<div class="form-row"><label class="lbl">Reassign to</label><select id="t-reassign">'+db.users.filter(function(u){return u.role==="technician"||u.id===t.tech;}).map(function(u){return '<option value="'+u.id+'"'+(u.id===t.tech?' selected':'')+'>'+esc(u.name+" "+u.surname)+'</option>';}).join('')+'</select></div>'
-      +'</div>'
-      +'<div class="section-title">Comments &amp; findings</div><div id="t-comments">'+renderComments(t.comments)+'</div>'
-      +'<div class="form-row" style="margin-top:12px"><textarea id="t-newcomment" rows="2" placeholder="Add a finding… e.g. Replaced SD cards on vehicles 4, 19, 27"></textarea></div>'
-      +'<button class="btn btn--sm" id="t-addcomment">Add comment</button>';
-    openModal(t.title, body, [
-      { label:"Close", cls:"btn", fn:closeModal },
-      { label:"Save", cls:"btn btn--primary", fn:function(){
-          var newTech=document.getElementById("t-reassign").value;
-          var reassigned = newTech!==t.tech;
-          if(reassigned){ var oldName=uFirst(t.tech); t.tech=newTech; t.comments.push({who:cur().init,txt:"Task passed from "+oldName+" to "+uFirst(newTech)+".",when:"Just now"}); }
-          t.status=document.getElementById("t-status").value; save(); renderNav(); closeModal();
-          toast(reassigned ? ("Task passed to "+uFirst(newTech)+" · email + WhatsApp sent") : "Task updated");
-          render();
-        } }
-    ]);
-    document.getElementById("t-addcomment").onclick=function(){ var ta=document.getElementById("t-newcomment"); var txt=ta.value.trim(); if(!txt)return; t.comments.push({who:cur().init,txt:txt,when:"Just now"}); save(); document.getElementById("t-comments").innerHTML=renderComments(t.comments); ta.value=""; toast("Comment added"); };
+    var t=db.tasks.find(function(x){return x.id===id;}); if(!t)return;
+    var body='<div class="detail-grid" style="margin-bottom:16px">'+field("Client",t.client)+field("Assigned to",uName(t.tech))+field("Due date",t.due||"—")+field("Recurring",t.recurring||"One-off")+'<div class="field"><label>Priority</label><div class="v">'+prioBadge(t.prio)+'</div></div></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Status</label><select id="t-status">'+['open','in_progress','done'].map(function(s){return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+STATUS_LABEL[s]+'</option>';}).join('')+'</select></div>'
+      +'<div class="form-row"><label class="lbl">Reassign to</label><select id="t-reassign">'+db.users.filter(function(u){return u.role==="technician"||u.id===t.tech;}).map(function(u){return '<option value="'+u.id+'"'+(u.id===t.tech?' selected':'')+'>'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="section-title">Comments &amp; findings</div><div id="t-comments">'+renderComments(t.comments)+'</div><div class="form-row" style="margin-top:12px"><textarea id="t-newcomment" rows="2" placeholder="Add a finding…"></textarea></div><button class="btn btn--sm" id="t-addcomment">Add comment</button>';
+    openModal(t.title, body, [ { label:"Close", cls:"btn", fn:closeModal }, { label:"Save", cls:"btn btn--primary", fn:function(){
+          var newTech=document.getElementById("t-reassign").value, reassigned=newTech!==t.tech, newStatus=document.getElementById("t-status").value;
+          if(reassigned){ var oldName=uFirst(t.tech); t.tech=newTech; t.comments.push({who:cur().init,txt:"Task passed from "+oldName+" to "+uFirst(newTech)+".",when:"Just now"}); P.reassign(t.id,newTech); P.addComment(t.id,"Task passed from "+oldName+" to "+uFirst(newTech)+"."); }
+          if(newStatus!==t.status){ t.status=newStatus; P.updateTask(t.id,{status:newStatus, completed_at:newStatus==="done"?new Date().toISOString():null}); }
+          renderNav(); closeModal(); toast(reassigned?("Task passed to "+uFirst(newTech)+" · notification sent"):"Task updated"); render();
+        } } ]);
+    document.getElementById("t-addcomment").onclick=function(){ var ta=document.getElementById("t-newcomment"); var txt=ta.value.trim(); if(!txt)return; t.comments.push({who:cur().init,txt:txt,when:"Just now"}); P.addComment(t.id,txt); document.getElementById("t-comments").innerHTML=renderComments(t.comments); ta.value=""; toast("Comment added"); };
   }
-  function renderComments(cs){ if(!cs.length) return '<div class="empty" style="padding:16px">No comments yet</div>'; return cs.map(function(c){ return '<div class="comment"><div class="avatar">'+esc(c.who)+'</div><div><div class="comment__who">'+esc(c.who)+'<span>'+esc(c.when)+'</span></div><div class="comment__txt">'+esc(c.txt)+'</div></div></div>'; }).join(''); }
-
+  function renderComments(cs){ if(!cs.length)return '<div class="empty" style="padding:16px">No comments yet</div>'; return cs.map(function(c){ return '<div class="comment"><div class="avatar">'+esc(c.who)+'</div><div><div class="comment__who">'+esc(c.who)+'<span>'+esc(c.when)+'</span></div><div class="comment__txt">'+esc(c.txt)+'</div></div></div>'; }).join(''); }
   function openTaskForm(pre){
     pre=pre||{};
+    var techs=db.users.filter(function(u){return u.role==="technician";});
     var body='<div class="form-row"><label class="lbl">Task title</label><input id="f-title" value="'+esc(pre.title||'')+'" placeholder="e.g. Check SD cards — Paper Group"></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Client</label><select id="f-client">'+db.clients.map(function(c){return '<option'+(pre.client===c.name?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
-      +'<div class="form-row"><label class="lbl">Assign to</label><select id="f-tech">'+db.users.filter(function(u){return u.role==="technician";}).map(function(u){return '<option value="'+u.id+'">'+esc(u.name+" "+u.surname)+'</option>';}).join('')+'</select></div></div>'
-      +'<div class="form-2"><div class="form-row"><label class="lbl">Due date</label><input id="f-due" type="date" value="'+TODAY+'"></div>'
-      +'<div class="form-row"><label class="lbl">Priority</label><select id="f-prio"><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="urgent"'+(pre.prio==="urgent"?' selected':'')+'>Urgent</option></select></div></div>'
+      +'<div class="form-row"><label class="lbl">Assign to</label><select id="f-tech">'+techs.map(function(u){return '<option value="'+u.id+'">'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Due date</label><input id="f-due" type="date" value="'+TODAY+'"></div><div class="form-row"><label class="lbl">Priority</label><select id="f-prio"><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="urgent"'+(pre.prio==="urgent"?' selected':'')+'>Urgent</option></select></div></div>'
       +'<div class="form-row"><label class="lbl">Recurring</label><select id="f-rec"><option value="">One-off</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option></select></div>'
-      +'<div class="inline-note"><span>ⓘ</span><span>On save, the assigned technician gets a WhatsApp + email with the task details. (Simulated in this prototype.)</span></div>';
-    openModal("New task", body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Create task", cls:"btn btn--primary", fn:function(){
+      +'<div class="inline-note"><span>ⓘ</span><span>The assigned technician gets a WhatsApp + email with the details once notifications are wired.</span></div>';
+    openModal("New task", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Create task", cls:"btn btn--primary", fn:async function(){
           var title=document.getElementById("f-title").value.trim(); if(!title){ toast("Add a task title"); return; }
           var tech=document.getElementById("f-tech").value;
-          db.tasks.unshift({ id:uid("k"), title:title, client:document.getElementById("f-client").value, tech:tech, due:document.getElementById("f-due").value, status:"open", prio:document.getElementById("f-prio").value, recurring:document.getElementById("f-rec").value||null, comments:[] });
-          save(); renderNav(); closeModal(); toast("Task created · notification sent to "+uFirst(tech)); go("tasks");
-        } }
-    ]);
+          var a={ title:title, client:document.getElementById("f-client").value, tech:tech, due:document.getElementById("f-due").value, prio:document.getElementById("f-prio").value, recurring:document.getElementById("f-rec").value||null };
+          closeModal(); var row=await P.createTask(a); if(!row) return;
+          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, comments:[] });
+          renderNav(); toast("Task created · notification queued for "+uFirst(tech)); go("tasks");
+        } } ]);
   }
   function quickOfflineTask(s){ openTaskForm({ title:"Investigate offline tracker — "+s.vehicle, client:s.client, prio:"urgent" }); }
 
-  /* ---- Installations ---- */
+  /* ---------------- Installations ---------------- */
   var installMode="board";
   function renderInstalls(){
     var cols=[["scheduled","Scheduled","var(--info)"],["in_progress","In progress","var(--warn)"],["completed","Completed","var(--good)"]];
-    var html='<div class="toolbar"><div class="chipset">'
-      +'<button class="chip'+(installMode==="board"?' is-on':'')+'" data-im="board">Schedule board</button>'
-      +'<button class="chip'+(installMode==="list"?' is-on':'')+'" data-im="list">List</button></div></div>';
+    var html='<div class="toolbar"><div class="chipset"><button class="chip'+(installMode==="board"?' is-on':'')+'" data-im="board">Schedule board</button><button class="chip'+(installMode==="list"?' is-on':'')+'" data-im="list">List</button></div></div>';
     if(installMode==="board"){
       html+='<div class="tablewrap"><div class="board">';
-      cols.forEach(function(col){
-        var items=db.installs.filter(function(i){return i.status===col[0];});
+      cols.forEach(function(col){ var items=db.installs.filter(function(i){return i.status===col[0];});
         html+='<div class="board__col"><div class="board__colhead"><span class="alert__dot" style="background:'+col[2]+'"></span>'+col[1]+'<span class="n">'+items.length+'</span></div><div class="board__list">';
         if(!items.length) html+='<div class="empty" style="padding:14px;font-size:12px">—</div>';
-        items.forEach(function(i){
-          html+='<div class="jobcard" data-install="'+i.id+'"><div class="jobcard__ref">'+esc(i.ref)+'</div><div class="jobcard__client">'+esc(i.client)+'</div>'
-            +'<div class="jobcard__row">'+esc(i.type)+' · '+esc(i.vehicle)+'</div><div class="jobcard__row">'+esc(i.date)+' · '+esc(i.time)+'</div>'
-            +'<div class="jobcard__foot"><span class="badge b-neutral">'+uInit(i.tech)+'</span>'+(i.photos?'<span class="cellmuted">📷 '+i.photos+'</span>':'')+(i.signed?'<span class="badge b-good" style="margin-left:auto"><span class="d"></span>Signed</span>':'<span style="margin-left:auto"></span>')+'</div></div>';
-        });
+        items.forEach(function(i){ html+='<div class="jobcard" data-install="'+i.id+'"><div class="jobcard__ref">'+esc(i.ref)+'</div><div class="jobcard__client">'+esc(i.client)+'</div><div class="jobcard__row">'+esc(i.type)+' · '+esc(i.vehicle)+'</div><div class="jobcard__row">'+esc(i.date)+' · '+esc(i.time)+'</div><div class="jobcard__foot"><span class="badge b-neutral">'+uInit(i.tech)+'</span>'+(i.signed?'<span class="badge b-good" style="margin-left:auto"><span class="d"></span>Signed</span>':'')+'</div></div>'; });
         html+='</div></div>';
       });
       html+='</div></div>';
     } else {
       html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Ref</th><th>Client</th><th>Type</th><th>Date</th><th>Tech</th><th>Status</th></tr></thead><tbody>';
-      db.installs.slice().sort(function(a,b){return a.date<b.date?1:-1;}).forEach(function(i){
-        var b=i.status==="completed"?'b-good':i.status==="in_progress"?'b-warn':'b-info';
-        html+='<tr class="clickable" data-install="'+i.id+'"><td class="tnum">'+esc(i.ref)+'</td><td style="font-weight:600">'+esc(i.client)+'</td><td>'+esc(i.type)+'</td><td class="tnum">'+esc(i.date)+' '+esc(i.time)+'</td><td>'+esc(uFirst(i.tech))+'</td><td><span class="badge '+b+'"><span class="d"></span>'+STATUS_LABEL[i.status]+'</span></td></tr>';
-      });
+      db.installs.slice().sort(function(a,b){return (a.date||"")<(b.date||"")?1:-1;}).forEach(function(i){ var b=i.status==="completed"?'b-good':i.status==="in_progress"?'b-warn':'b-info'; html+='<tr class="clickable" data-install="'+i.id+'"><td class="tnum">'+esc(i.ref)+'</td><td style="font-weight:600">'+esc(i.client)+'</td><td>'+esc(i.type)+'</td><td class="tnum">'+esc(i.date)+' '+esc(i.time)+'</td><td>'+esc(uFirst(i.tech))+'</td><td><span class="badge '+b+'"><span class="d"></span>'+STATUS_LABEL[i.status]+'</span></td></tr>'; });
       html+='</tbody></table></div></div></div>';
     }
     view.innerHTML=html;
     view.querySelectorAll("[data-im]").forEach(function(b){ b.onclick=function(){ installMode=b.dataset.im; renderInstalls(); }; });
     view.querySelectorAll("[data-install]").forEach(function(c){ c.onclick=function(){ openInstall(c.dataset.install); }; });
   }
-
   function openInstall(id){
-    var i=db.installs.find(function(x){return x.id===id;}); if(!i) return;
-    var photosHtml='';
-    for(var p=0;p<(i.photos||0);p++){ photosHtml+='<div class="photo" style="display:flex;align-items:center;justify-content:center;color:var(--fg-dim);font-size:10px">IMG '+(p+1)+'</div>'; }
+    var i=db.installs.find(function(x){return x.id===id;}); if(!i)return;
+    var photosHtml=''; for(var p=0;p<(i.photos||0);p++){ photosHtml+='<div class="photo" style="display:flex;align-items:center;justify-content:center;color:var(--fg-dim);font-size:10px">IMG '+(p+1)+'</div>'; }
     photosHtml+='<label class="photo-add"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add<input type="file" accept="image/*" capture="environment" hidden id="i-photo"></label>';
-
-    var body='<div class="detail-grid" style="margin-bottom:16px">'
-      +field("Reference",i.ref)+field("Client",i.client)+field("Contact",i.contact)+field("Phone",i.phone)
-      +field("Vehicle reg",i.vehicle)+field("Job type",i.type)+field("Date & time",i.date+" · "+i.time)+field("Location",i.loc)+field("Technician",uName(i.tech))+'</div>'
+    var body='<div class="detail-grid" style="margin-bottom:16px">'+field("Reference",i.ref)+field("Client",i.client)+field("Contact",i.contact)+field("Phone",i.phone)+field("Vehicle reg",i.vehicle)+field("Job type",i.type)+field("Date & time",(i.date||"—")+" · "+(i.time||""))+field("Location",i.loc)+field("Technician",uName(i.tech))+'</div>'
       +'<div class="form-row"><label class="lbl">Status</label><select id="i-status">'+[['scheduled','Scheduled'],['in_progress','In progress'],['completed','Completed']].map(function(s){return '<option value="'+s[0]+'"'+(i.status===s[0]?' selected':'')+'>'+s[1]+'</option>';}).join('')+'</select></div>'
       +'<div class="section-title">Site photos</div><div class="photos" id="i-photos">'+photosHtml+'</div>'
-      +'<div class="section-title">Client sign-off</div><div id="i-sig">'+ (i.signed
-          ? '<div class="sig-done"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><div><div style="font-weight:600;font-size:13px">Signed by client</div><div class="cellmuted">Confirmed equipment installed &amp; working</div></div></div>'
-          : '<div class="inline-note" style="margin-bottom:10px"><span>ⓘ</span><span>Client signs to confirm the installation is complete and all equipment is working.</span></div><canvas class="sigpad" id="i-sigpad"></canvas><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn--sm" id="i-sigclear">Clear</button><button class="btn btn--sm btn--primary" id="i-sigsave">Confirm sign-off</button></div>') +'</div>';
-    openModal("Installation "+i.ref, body, [
-      { label:"Close", cls:"btn", fn:closeModal },
-      { label:"Save", cls:"btn btn--primary", fn:function(){ i.status=document.getElementById("i-status").value; save(); renderNav(); closeModal(); toast("Installation updated"); renderInstalls(); } }
-    ]);
-
-    var photoInput=document.getElementById("i-photo");
-    if(photoInput) photoInput.onchange=function(){ if(photoInput.files&&photoInput.files.length){ i.photos=(i.photos||0)+1; save(); toast("Photo attached to "+i.ref); openInstall(id); } };
-
-    if(!i.signed){ setupSigPad(document.getElementById("i-sigpad"), function(hasInk){
-      document.getElementById("i-sigsave").onclick=function(){ if(!hasInk()){ toast("Ask the client to sign first"); return; } i.signed=true; if(i.status==="scheduled"||i.status==="in_progress"){} save(); closeModal(); toast("Signed off · "+i.ref+" confirmed by client"); renderInstalls(); };
-      document.getElementById("i-sigclear").onclick=function(){ clearSig(); };
-    }); }
+      +'<div class="section-title">Client sign-off</div><div id="i-sig">'+(i.signed?'<div class="sig-done"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg><div><div style="font-weight:600;font-size:13px">Signed by client</div><div class="cellmuted">Confirmed equipment installed &amp; working</div></div></div>':'<div class="inline-note" style="margin-bottom:10px"><span>ⓘ</span><span>Client signs to confirm the install is complete and all equipment works.</span></div><canvas class="sigpad" id="i-sigpad"></canvas><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn--sm" id="i-sigclear">Clear</button><button class="btn btn--sm btn--primary" id="i-sigsave">Confirm sign-off</button></div>')+'</div>';
+    openModal("Installation "+i.ref, body, [ { label:"Close", cls:"btn", fn:closeModal }, { label:"Save", cls:"btn btn--primary", fn:function(){ var ns=document.getElementById("i-status").value; if(ns!==i.status){ i.status=ns; P.updateInstall(i.id,{status:ns}); } renderNav(); closeModal(); toast("Installation updated"); renderInstalls(); } } ]);
+    var photoInput=document.getElementById("i-photo"); if(photoInput) photoInput.onchange=function(){ if(photoInput.files&&photoInput.files.length){ i.photos=(i.photos||0)+1; toast("Photo attached (upload wiring next)"); openInstall(id); } };
+    if(!i.signed){ setupSigPad(document.getElementById("i-sigpad"), function(hasInk){ document.getElementById("i-sigsave").onclick=function(){ if(!hasInk()){ toast("Ask the client to sign first"); return; } i.signed=true; P.updateInstall(i.id,{signed:true, signed_at:new Date().toISOString()}); closeModal(); toast("Signed off · "+i.ref+" confirmed"); renderInstalls(); }; document.getElementById("i-sigclear").onclick=function(){ clearSig(); }; }); }
   }
-
-  var _sigClear=null;
-  function clearSig(){ if(_sigClear) _sigClear(); }
-  function setupSigPad(canvas, ready){
-    if(!canvas) return;
-    var ctx=canvas.getContext("2d");
+  var _sigClear=null; function clearSig(){ if(_sigClear) _sigClear(); }
+  function setupSigPad(canvas, ready){ if(!canvas)return; var ctx=canvas.getContext("2d");
     function resize(){ var r=canvas.getBoundingClientRect(); canvas.width=r.width*2; canvas.height=r.height*2; ctx.scale(2,2); ctx.lineWidth=2.2; ctx.lineCap="round"; ctx.strokeStyle=getComputedStyle(document.body).color; }
-    resize();
-    var drawing=false, ink=false, last=null;
+    resize(); var drawing=false, ink=false, last=null;
     function pos(e){ var r=canvas.getBoundingClientRect(); var pt=e.touches?e.touches[0]:e; return {x:pt.clientX-r.left,y:pt.clientY-r.top}; }
     function start(e){ drawing=true; last=pos(e); e.preventDefault(); }
     function move(e){ if(!drawing)return; var p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; ink=true; e.preventDefault(); }
     function end(){ drawing=false; }
     canvas.addEventListener("mousedown",start); canvas.addEventListener("mousemove",move); window.addEventListener("mouseup",end);
     canvas.addEventListener("touchstart",start,{passive:false}); canvas.addEventListener("touchmove",move,{passive:false}); canvas.addEventListener("touchend",end);
-    _sigClear=function(){ ctx.clearRect(0,0,canvas.width,canvas.height); ink=false; };
-    ready(function(){ return ink; });
+    _sigClear=function(){ ctx.clearRect(0,0,canvas.width,canvas.height); ink=false; }; ready(function(){ return ink; });
   }
-
   function openInstallForm(){
+    var techs=db.users.filter(function(u){return u.role==="technician";});
     var body='<div class="form-row"><label class="lbl">Client</label><div class="seg" id="n-mode"><button type="button" class="on" data-mode="existing">Existing client</button><button type="button" data-mode="new">New client</button></div></div>'
       +'<div id="n-existing"><div class="form-row"><label class="lbl">Select client</label><select id="n-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div></div>'
-      +'<div id="n-new" hidden><div class="form-row"><label class="lbl">Client name</label><input id="n-cname" placeholder="Company name"></div>'
-        +'<div class="form-2"><div class="form-row"><label class="lbl">Contact person</label><input id="n-ccontact" placeholder="Name"></div><div class="form-row"><label class="lbl">Contact phone</label><input id="n-cphone" placeholder="+267 …"></div></div></div>'
+      +'<div id="n-new" hidden><div class="form-row"><label class="lbl">Client name</label><input id="n-cname" placeholder="Company name"></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Contact person</label><input id="n-contact" placeholder="On-site contact"></div><div class="form-row"><label class="lbl">Phone</label><input id="n-phone" placeholder="+267 …"></div></div>'
       +'<div class="form-row"><label class="lbl">Vehicle registration</label><input id="n-vehicle" placeholder="e.g. B 902 DLR"></div>'
-      +'<div class="form-2"><div class="form-row"><label class="lbl">Job type</label><select id="n-type"><option>New install</option><option>Dash cam</option><option>Temp sensor</option><option>Diesel sensor</option><option>Unit swap</option><option>Removal</option></select></div>'
-      +'<div class="form-row"><label class="lbl">Technician</label><select id="n-tech">'+db.users.filter(function(u){return u.role==="technician";}).map(function(u){return '<option value="'+u.id+'">'+esc(u.name+" "+u.surname)+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Job type</label><select id="n-type">'+INSTALL_TYPES.map(function(p){return '<option>'+p[1]+'</option>';}).join('')+'</select></div><div class="form-row"><label class="lbl">Technician</label><select id="n-tech">'+techs.map(function(u){return '<option value="'+u.id+'">'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Date</label><input id="n-date" type="date" value="'+TODAY+'"></div><div class="form-row"><label class="lbl">Time</label><input id="n-time" type="time" value="09:00"></div></div>'
       +'<div class="form-row"><label class="lbl">Location</label><input id="n-loc" placeholder="Site / yard address"></div>'
-      +'<div class="inline-note"><span>ⓘ</span><span>On create, the technician gets a WhatsApp with client, contact, vehicle, date, time and location. A new client is added to your client list automatically.</span></div>';
-    openModal("New installation", body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Schedule", cls:"btn btn--primary", fn:function(){
+      +'<div class="inline-note"><span>ⓘ</span><span>A new client is created and linked automatically. The technician gets a WhatsApp once notifications are wired.</span></div>';
+    openModal("New installation", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Schedule", cls:"btn btn--primary", fn:async function(){
           var mode=document.querySelector("#n-mode button.on").dataset.mode;
-          var clientName, contact, phone;
-          if(mode==="new"){
-            clientName=document.getElementById("n-cname").value.trim(); if(!clientName){ toast("Enter the new client name"); return; }
-            contact=document.getElementById("n-ccontact").value||document.getElementById("n-contact").value||"—";
-            phone=document.getElementById("n-cphone").value||document.getElementById("n-phone").value||"—";
-            if(!db.clients.find(function(c){return c.name===clientName;})) db.clients.unshift({ id:uid("c"), name:clientName, industry:"—", contact:contact, phone:phone, fleet:1, products:["GPS tracking"], country:"Botswana", expires:"2027-12-31" });
-          } else { clientName=document.getElementById("n-client").value; contact=document.getElementById("n-contact").value||"—"; phone=document.getElementById("n-phone").value||"—"; }
-          var tech=document.getElementById("n-tech").value; var n=2044+db.installs.length;
-          db.installs.unshift({ id:uid("i"), ref:"INS-"+n, client:clientName, contact:contact, phone:phone, vehicle:document.getElementById("n-vehicle").value||"TBC", type:document.getElementById("n-type").value, date:document.getElementById("n-date").value, time:document.getElementById("n-time").value, loc:document.getElementById("n-loc").value||"—", tech:tech, status:"scheduled", photos:0, signed:false });
-          save(); renderNav(); closeModal(); toast("Installation scheduled · WhatsApp sent to "+uFirst(tech)); renderInstalls();
-        } }
-    ]);
-    var modeBtns=document.querySelectorAll("#n-mode button");
-    modeBtns.forEach(function(b){ b.onclick=function(){ modeBtns.forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); var isNew=b.dataset.mode==="new"; document.getElementById("n-new").hidden=!isNew; document.getElementById("n-existing").hidden=isNew; }; });
+          var contact=document.getElementById("n-contact").value||"—", phone=document.getElementById("n-phone").value||"—", clientName;
+          if(mode==="new"){ clientName=document.getElementById("n-cname").value.trim(); if(!clientName){ toast("Enter the new client name"); return; }
+            if(!clientIdByName[clientName]){ var nc=await P.createClient({ name:clientName, industry:"—", contact:contact, phone:phone, fleet:1, products:["GPS tracking"] }); if(!nc) return; db.clients.unshift({ id:nc.id, name:clientName, industry:"—", contact:contact, phone:phone, fleet:1, products:["GPS tracking"], expires:"—" }); }
+          } else { clientName=document.getElementById("n-client").value; }
+          var tech=document.getElementById("n-tech").value; var ref="INS-"+(2044+db.installs.length);
+          var a={ ref:ref, client:clientName, contact:contact, phone:phone, vehicle:document.getElementById("n-vehicle").value||"TBC", type:document.getElementById("n-type").value, date:document.getElementById("n-date").value, time:document.getElementById("n-time").value, loc:document.getElementById("n-loc").value||"—", tech:tech };
+          closeModal(); var row=await P.createInstall(a); if(!row) return;
+          db.installs.unshift({ id:row.id, ref:a.ref, client:a.client, contact:a.contact, phone:a.phone, vehicle:a.vehicle, type:a.type, date:a.date, time:a.time, loc:a.loc, tech:a.tech, status:"scheduled", photos:0, signed:false });
+          renderNav(); toast("Installation scheduled · notification queued for "+uFirst(tech)); renderInstalls();
+        } } ]);
+    var modeBtns=document.querySelectorAll("#n-mode button"); modeBtns.forEach(function(b){ b.onclick=function(){ modeBtns.forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); var isNew=b.dataset.mode==="new"; document.getElementById("n-new").hidden=!isNew; document.getElementById("n-existing").hidden=isNew; }; });
   }
 
-  /* ---- Clients ---- */
+  /* ---------------- Clients ---------------- */
   function renderClients(){
     var html='<div class="toolbar"><div class="spacer"></div><button class="btn btn--sm" id="c-import"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Import vehicles (CSV)</button></div>'
       +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Client</th><th>Industry</th><th>Fleet</th><th>Products</th><th>Renews</th></tr></thead><tbody>';
-    db.clients.forEach(function(c){
-      var exp=c.expires<"2026-12-01";
-      html+='<tr class="clickable" data-client="'+c.id+'"><td style="font-weight:600">'+esc(c.name)+'</td><td>'+esc(c.industry)+'</td><td class="tnum">'+c.fleet+'</td><td><div class="pills">'+c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join('')+'</div></td><td>'+(exp?'<span class="badge b-warn">'+esc(c.expires)+'</span>':'<span class="tnum">'+esc(c.expires)+'</span>')+'</td></tr>';
-    });
+    if(!db.clients.length) html+='<tr><td colspan="5"><div class="empty">No clients yet</div></td></tr>';
+    db.clients.forEach(function(c){ var exp=c.expires&&c.expires!=="—"&&c.expires<"2026-12-01"; html+='<tr class="clickable" data-client="'+c.id+'"><td style="font-weight:600">'+esc(c.name)+'</td><td>'+esc(c.industry)+'</td><td class="tnum">'+c.fleet+'</td><td><div class="pills">'+c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join('')+'</div></td><td>'+(exp?'<span class="badge b-warn">'+esc(c.expires)+'</span>':'<span class="tnum">'+esc(c.expires)+'</span>')+'</td></tr>'; });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-client]").forEach(function(r){ r.onclick=function(){ openClient(r.dataset.client); }; });
     document.getElementById("c-import").onclick=openCsvImport;
   }
   function openClient(id){
-    var c=db.clients.find(function(x){return x.id===id;}); if(!c) return;
+    var c=db.clients.find(function(x){return x.id===id;}); if(!c)return;
     var openTasks=db.tasks.filter(function(t){return t.client===c.name&&t.status!=="done";});
-    var history=db.installs.filter(function(i){return i.client===c.name;}).sort(function(a,b){return a.date<b.date?1:-1;});
+    var history=db.installs.filter(function(i){return i.client===c.name;}).sort(function(a,b){return (a.date||"")<(b.date||"")?1:-1;});
     var body='<div class="detail-grid" style="margin-bottom:8px">'+field("Industry",c.industry)+field("Fleet size",c.fleet+" vehicles")+field("Contact",c.contact)+field("Phone",c.phone)+field("Contract renews",c.expires)+'</div>'
-      +'<div class="section-title">Products</div><div class="pills">'+c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join('')+'</div>'
-      +'<div class="section-title">Open tasks ('+openTasks.length+')</div>'+(openTasks.length?openTasks.map(function(t){return '<div class="alert"><span class="alert__dot" style="background:var(--brand-red)"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">due '+esc(t.due)+' · '+uInit(t.tech)+'</div></div></div>';}).join(''):'<div class="cellmuted" style="padding:4px 0">No open tasks</div>')
+      +'<div class="section-title">Products</div><div class="pills">'+(c.products.length?c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join(''):'<span class="cellmuted">—</span>')+'</div>'
+      +'<div class="section-title">Open tasks ('+openTasks.length+')</div>'+(openTasks.length?openTasks.map(function(t){return '<div class="alert"><span class="alert__dot" style="background:var(--brand-red)"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+(t.due?'due '+esc(t.due)+' · ':'')+uInit(t.tech)+'</div></div></div>';}).join(''):'<div class="cellmuted" style="padding:4px 0">No open tasks</div>')
       +'<div class="section-title">Service history</div><div class="timeline">'+(history.length?history.map(function(i){return '<div class="tl-item"><div class="tl-date">'+esc(i.date)+' · '+esc(i.ref)+'</div><div class="tl-title">'+esc(i.type)+' — '+esc(i.vehicle)+' ('+STATUS_LABEL[i.status]+')</div></div>';}).join(''):'<div class="cellmuted">No service records</div>')+'</div>';
     openModal(c.name, body, [{ label:"Close", cls:"btn btn--primary", fn:closeModal }]);
   }
@@ -751,41 +564,31 @@
       +'<div class="form-2"><div class="form-row"><label class="lbl">Industry</label><input id="cf-industry" placeholder="e.g. Cold chain"></div><div class="form-row"><label class="lbl">Fleet size</label><input id="cf-fleet" type="number" min="0" value="1"></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Contact person</label><input id="cf-contact" placeholder="Name"></div><div class="form-row"><label class="lbl">Phone</label><input id="cf-phone" placeholder="+267 …"></div></div>'
       +'<div class="form-row"><label class="lbl">Products</label><div class="checks" id="cf-products">'+PRODUCTS.map(function(p){return '<label class="check"><input type="checkbox" value="'+esc(p)+'"'+(p==="GPS tracking"?' checked':'')+'><span>'+esc(p)+'</span></label>';}).join('')+'</div></div>';
-    openModal("New client", body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Add client", cls:"btn btn--primary", fn:function(){
+    openModal("New client", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Add client", cls:"btn btn--primary", fn:async function(){
           var name=document.getElementById("cf-name").value.trim(); if(!name){ toast("Enter a client name"); return; }
-          var products=Array.prototype.slice.call(document.querySelectorAll("#cf-products input:checked")).map(function(x){return x.value;});
-          db.clients.unshift({ id:uid("c"), name:name, industry:document.getElementById("cf-industry").value||"—", contact:document.getElementById("cf-contact").value||"—", phone:document.getElementById("cf-phone").value||"—", fleet:parseInt(document.getElementById("cf-fleet").value||"0",10), products:products.length?products:["GPS tracking"], country:"Botswana", expires:"2027-12-31" });
-          save(); renderNav(); closeModal(); toast("Client added"); renderClients();
-        } }
-    ]);
+          var products=Array.prototype.slice.call(document.querySelectorAll("#cf-products input:checked")).map(function(x){return x.value;}); if(!products.length) products=["GPS tracking"];
+          var a={ name:name, industry:document.getElementById("cf-industry").value||"—", contact:document.getElementById("cf-contact").value||"—", phone:document.getElementById("cf-phone").value||"—", fleet:parseInt(document.getElementById("cf-fleet").value||"0",10), products:products };
+          closeModal(); var row=await P.createClient(a); if(!row) return;
+          db.clients.unshift({ id:row.id, name:a.name, industry:a.industry, contact:a.contact, phone:a.phone, fleet:a.fleet, products:a.products, expires:"—" });
+          toast("Client added"); renderClients();
+        } } ]);
     syncChecks("cf-products");
   }
   function openCsvImport(){
-    var body='<div class="inline-note warn" style="margin-bottom:14px"><span>⚠</span><span>LocoNav’s public developer docs don’t expose a vehicle-list or count endpoint, so we can’t auto-pull your fleet. CSV import is the reliable route.</span></div>'
-      +'<div class="form-row"><label class="lbl">Client</label><select id="csv-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
-      +'<div class="form-row"><label class="lbl">Vehicle CSV</label><input type="file" accept=".csv" id="csv-file"></div>'
-      +'<div class="inline-note"><span>ⓘ</span><span>Expected columns: registration, make/model, tracker serial, SIM number. The fleet count updates from the row count.</span></div>';
-    openModal("Import vehicles", body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Import", cls:"btn btn--primary", fn:function(){ var f=document.getElementById("csv-file"); if(!f.files||!f.files.length){ toast("Choose a CSV file first"); return; } closeModal(); toast("CSV received — vehicles parsed and linked (prototype stub)"); } }
-    ]);
+    var body='<div class="inline-note warn" style="margin-bottom:14px"><span>⚠</span><span>LocoNav’s public docs don’t expose a vehicle-list endpoint, so a weekly CSV import is the route. (Parsing wiring is next.)</span></div>'
+      +'<div class="form-row"><label class="lbl">Client</label><select id="csv-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div><div class="form-row"><label class="lbl">Vehicle CSV</label><input type="file" accept=".csv" id="csv-file"></div><div class="inline-note"><span>ⓘ</span><span>Expected columns: registration, make/model, tracker serial, SIM number.</span></div>';
+    openModal("Import vehicles", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Import", cls:"btn btn--primary", fn:function(){ var f=document.getElementById("csv-file"); if(!f.files||!f.files.length){ toast("Choose a CSV file first"); return; } closeModal(); toast("CSV received — parsing wiring is next"); } } ]);
   }
 
-  /* ---- Inventory ---- */
+  /* ---------------- Inventory ---------------- */
   var invTab="stock";
   function renderInventory(){
-    var html='<div class="toolbar"><div class="chipset">'
-      +'<button class="chip'+(invTab==="stock"?' is-on':'')+'" data-it="stock">In stock</button>'
-      +'<button class="chip'+(invTab==="damages"?' is-on':'')+'" data-it="damages">Damages</button></div></div>';
+    var html='<div class="toolbar"><div class="chipset"><button class="chip'+(invTab==="stock"?' is-on':'')+'" data-it="stock">In stock</button><button class="chip'+(invTab==="damages"?' is-on':'')+'" data-it="damages">Damages</button></div></div>';
     if(invTab==="stock"){
       html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Item</th><th>Category</th><th>In stock</th><th>Min</th><th>Status</th><th></th></tr></thead><tbody>';
-      db.inventory.forEach(function(v){
-        var low=v.instock<v.min;
-        html+='<tr class="clickable" data-item="'+v.id+'"><td style="font-weight:600">'+esc(v.item)+'<div class="cellmuted">'+esc(v.sku)+'</div></td><td>'+esc(v.cat)+'</td><td class="tnum">'+v.instock+'</td><td class="tnum cellmuted">'+v.min+'</td><td>'+(low?'<span class="badge b-crit"><span class="d"></span>Reorder</span>':'<span class="badge b-good"><span class="d"></span>OK</span>')+'</td><td><button class="btn btn--sm" data-reorder="'+v.id+'">Reorder</button></td></tr>';
-      });
-      html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Click an item to take units out of stock (logs who took them and for which client) or mark damages. Reorder emails the admin.</span></div>';
+      if(!db.inventory.length) html+='<tr><td colspan="6"><div class="empty">No items yet</div></td></tr>';
+      db.inventory.forEach(function(v){ var low=v.instock<v.min; html+='<tr class="clickable" data-item="'+v.id+'"><td style="font-weight:600">'+esc(v.item)+'<div class="cellmuted">'+esc(v.sku)+'</div></td><td>'+esc(v.cat)+'</td><td class="tnum">'+v.instock+'</td><td class="tnum cellmuted">'+v.min+'</td><td>'+(low?'<span class="badge b-crit"><span class="d"></span>Reorder</span>':'<span class="badge b-good"><span class="d"></span>OK</span>')+'</td><td><button class="btn btn--sm" data-reorder="'+v.id+'">Reorder</button></td></tr>'; });
+      html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Click an item to take units out (logs who + which client) or mark damages. Reorder emails the admin.</span></div>';
     } else {
       var dmg=db.inventory.filter(function(v){return v.damaged>0;});
       html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Item</th><th>Category</th><th>Damaged units</th></tr></thead><tbody>';
@@ -799,144 +602,105 @@
     view.querySelectorAll("[data-reorder]").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); var v=db.inventory.find(function(x){return x.id===b.dataset.reorder;}); toast("Reorder request for "+v.item+" emailed to admin"); }; });
   }
   function openItem(id){
-    var v=db.inventory.find(function(x){return x.id===id;}); if(!v) return;
-    var last=v.moves[0];
-    var body='<div class="detail-grid" style="margin-bottom:16px">'+field("SKU",v.sku)+field("Category",v.cat)+field("In stock",v.instock)+field("Minimum",v.min)+field("Damaged",v.damaged)
-      +'<div class="field"><label>Last taken by</label><div class="v">'+(last?esc(last.who)+' → '+esc(last.client):'—')+'</div></div></div>'
+    var v=db.inventory.find(function(x){return x.id===id;}); if(!v)return; var last=v.moves[0];
+    var body='<div class="detail-grid" style="margin-bottom:16px">'+field("SKU",v.sku)+field("Category",v.cat)+field("In stock",v.instock)+field("Minimum",v.min)+field("Damaged",v.damaged)+'<div class="field"><label>Last taken by</label><div class="v">'+(last?esc(last.who)+' → '+esc(last.client):'—')+'</div></div></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn btn--sm btn--primary" id="it-take">Take out of stock</button><button class="btn btn--sm btn--danger" id="it-dmg">Mark damaged</button><button class="btn btn--sm" id="it-reorder">Reorder</button></div>'
-      +'<div class="section-title">Stock movements</div>'
-      +'<div class="tablewrap"><table class="data" style="min-width:auto"><thead><tr><th>Date</th><th>Qty</th><th>By</th><th>Client</th><th>Purpose</th></tr></thead><tbody>'
-      + (v.moves.length? v.moves.map(function(m){ return '<tr><td>'+esc(m.date)+'</td><td class="tnum">'+(m.dir==="damage"?'−':'−')+m.qty+'</td><td>'+esc(m.who)+'</td><td>'+esc(m.client||"—")+'</td><td>'+esc(m.purpose)+'</td></tr>'; }).join('') : '<tr><td colspan="5"><div class="empty">No movements yet</div></td></tr>') +'</tbody></table></div>';
+      +'<div class="section-title">Stock movements</div><div class="tablewrap"><table class="data" style="min-width:auto"><thead><tr><th>Date</th><th>Qty</th><th>By</th><th>Client</th><th>Purpose</th></tr></thead><tbody>'
+      +(v.moves.length?v.moves.map(function(m){return '<tr><td>'+esc(m.date)+'</td><td class="tnum">−'+m.qty+'</td><td>'+esc(m.who)+'</td><td>'+esc(m.client||"—")+'</td><td>'+esc(m.purpose)+'</td></tr>';}).join(''):'<tr><td colspan="5"><div class="empty">No movements yet</div></td></tr>')+'</tbody></table></div>';
     openModal(v.item, body, [{ label:"Close", cls:"btn btn--primary", fn:closeModal }]);
     document.getElementById("it-take").onclick=function(){ openTakeStock(v); };
     document.getElementById("it-dmg").onclick=function(){ openDamage(v); };
     document.getElementById("it-reorder").onclick=function(){ toast("Reorder request for "+v.item+" emailed to admin"); };
   }
   function openTakeStock(v){
-    var body='<div class="form-2"><div class="form-row"><label class="lbl">Quantity</label><input id="ts-qty" type="number" min="1" value="1"></div>'
-      +'<div class="form-row"><label class="lbl">Taken by</label><select id="ts-who">'+db.users.map(function(u){return '<option value="'+u.init+'"'+(u.id===db.currentUser?' selected':'')+'>'+esc(u.name+" "+u.surname)+'</option>';}).join('')+'</select></div></div>'
-      +'<div class="form-row"><label class="lbl">For client</label><select id="ts-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
-      +'<div class="form-row"><label class="lbl">Purpose</label><select id="ts-purpose"><option>Install</option><option>Swap</option><option>Replacement</option><option>Repair</option></select></div>'
-      +'<div class="inline-note"><span>ⓘ</span><span>This logs who took the units and which client they went to, and reduces stock on hand.</span></div>';
-    openModal("Take out of stock — "+v.item, body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Confirm", cls:"btn btn--primary", fn:function(){
-          var qty=parseInt(document.getElementById("ts-qty").value||"0",10); if(qty<1){ toast("Enter a quantity"); return; }
-          if(qty>v.instock){ toast("Only "+v.instock+" in stock"); return; }
-          var forClient=document.getElementById("ts-client").value;
-          v.instock-=qty; v.moves.unshift({ who:document.getElementById("ts-who").value, client:forClient, qty:qty, purpose:document.getElementById("ts-purpose").value, date:"Today", dir:"out" });
-          save(); closeModal(); toast(qty+" × "+v.sku+" taken out for "+forClient); openItem(v.id); renderInventory();
-        } }
-    ]);
+    var body='<div class="form-2"><div class="form-row"><label class="lbl">Quantity</label><input id="ts-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">For client</label><select id="ts-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="form-row"><label class="lbl">Purpose</label><select id="ts-purpose"><option>Install</option><option>Swap</option><option>Replacement</option><option>Repair</option></select></div><div class="inline-note"><span>ⓘ</span><span>Logs who took the units and which client they went to, and reduces stock on hand.</span></div>';
+    openModal("Take out of stock — "+v.item, body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Confirm", cls:"btn btn--primary", fn:function(){
+          var qty=parseInt(document.getElementById("ts-qty").value||"0",10); if(qty<1){ toast("Enter a quantity"); return; } if(qty>v.instock){ toast("Only "+v.instock+" in stock"); return; }
+          var forClient=document.getElementById("ts-client").value, purpose=document.getElementById("ts-purpose").value;
+          v.instock-=qty; v.moves.unshift({ who:cur().init, client:forClient, qty:qty, purpose:purpose, date:"Today", dir:"out" });
+          P.moveStock(v.id,"out",qty,forClient,purpose); closeModal(); toast(qty+" × "+v.sku+" taken out for "+forClient); openItem(v.id); renderInventory();
+        } } ]);
   }
   function openDamage(v){
-    var body='<div class="form-2"><div class="form-row"><label class="lbl">Quantity</label><input id="dm-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">Reported by</label><select id="dm-who">'+db.users.map(function(u){return '<option value="'+u.init+'"'+(u.id===db.currentUser?' selected':'')+'>'+esc(u.name+" "+u.surname)+'</option>';}).join('')+'</select></div></div>'
-      +'<div class="form-row"><label class="lbl">Note</label><input id="dm-note" placeholder="e.g. water damage, dropped unit"></div>';
-    openModal("Mark damaged — "+v.item, body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Record damage", cls:"btn btn--danger", fn:function(){
-          var qty=parseInt(document.getElementById("dm-qty").value||"0",10); if(qty<1){ toast("Enter a quantity"); return; }
-          if(qty>v.instock){ toast("Only "+v.instock+" in stock"); return; }
-          v.instock-=qty; v.damaged+=qty; v.moves.unshift({ who:document.getElementById("dm-who").value, client:"—", qty:qty, purpose:"Damaged: "+(document.getElementById("dm-note").value||"no note"), date:"Today", dir:"damage" });
-          save(); closeModal(); toast(qty+" × "+v.sku+" moved to damages"); openItem(v.id); renderInventory();
-        } }
-    ]);
+    var body='<div class="form-row"><label class="lbl">Quantity</label><input id="dm-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">Note</label><input id="dm-note" placeholder="e.g. water damage, dropped unit"></div>';
+    openModal("Mark damaged — "+v.item, body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Record damage", cls:"btn btn--danger", fn:function(){
+          var qty=parseInt(document.getElementById("dm-qty").value||"0",10); if(qty<1){ toast("Enter a quantity"); return; } if(qty>v.instock){ toast("Only "+v.instock+" in stock"); return; }
+          var note=document.getElementById("dm-note").value||"no note";
+          v.instock-=qty; v.damaged+=qty; v.moves.unshift({ who:cur().init, client:"—", qty:qty, purpose:"Damaged: "+note, date:"Today", dir:"damage" });
+          P.moveStock(v.id,"damage",qty,null,"Damaged: "+note); closeModal(); toast(qty+" × "+v.sku+" moved to damages"); openItem(v.id); renderInventory();
+        } } ]);
   }
-  var INV_CATS=["Tracker","Sensor","Dash cam","SD card","Fuel sensor","Harness","SIM","Consumable"];
   function openItemForm(){
     var body='<div class="form-row"><label class="lbl">Item name</label><input id="if-name" placeholder="e.g. Teltonika FMB920 GPS tracker"></div>'
-      +'<div class="form-2"><div class="form-row"><label class="lbl">SKU</label><input id="if-sku" placeholder="e.g. FMB920"></div><div class="form-row"><label class="lbl">Category</label><select id="if-cat">'+INV_CATS.map(function(c){return '<option>'+esc(c)+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">SKU</label><input id="if-sku" placeholder="e.g. FMB920"></div><div class="form-row"><label class="lbl">Category</label><select id="if-cat">'+CATS.map(function(c){return '<option>'+c[1]+'</option>';}).join('')+'</select></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Opening stock</label><input id="if-stock" type="number" min="0" value="0"></div><div class="form-row"><label class="lbl">Minimum level</label><input id="if-min" type="number" min="0" value="5"></div></div>';
-    openModal("Add inventory item", body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:"Add item", cls:"btn btn--primary", fn:function(){
+    openModal("Add inventory item", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Add item", cls:"btn btn--primary", fn:async function(){
           var name=document.getElementById("if-name").value.trim(); if(!name){ toast("Enter an item name"); return; }
-          db.inventory.push({ id:uid("v"), item:name, sku:document.getElementById("if-sku").value||"—", cat:document.getElementById("if-cat").value, instock:parseInt(document.getElementById("if-stock").value||"0",10), min:parseInt(document.getElementById("if-min").value||"0",10), damaged:0, moves:[] });
-          save(); closeModal(); toast("Item added to inventory"); renderInventory();
-        } }
-    ]);
+          var a={ item:name, sku:document.getElementById("if-sku").value||null, cat:document.getElementById("if-cat").value, instock:parseInt(document.getElementById("if-stock").value||"0",10), min:parseInt(document.getElementById("if-min").value||"0",10) };
+          closeModal(); var row=await P.createItem(a); if(!row) return;
+          db.inventory.push({ id:row.id, item:a.item, sku:a.sku||"—", cat:a.cat, instock:a.instock, min:a.min, damaged:0, moves:[] });
+          toast("Item added to inventory"); renderInventory();
+        } } ]);
   }
 
-  /* ---- SIMs ---- */
+  /* ---------------- SIMs ---------------- */
   function renderSims(){
-    var off=db.sims.filter(function(s){return s.status==="offline";}).length;
-    var html='';
+    var off=db.sims.filter(function(s){return s.status==="offline";}).length; var html='';
     if(off) html+='<div class="inline-note" style="margin-bottom:14px;color:var(--crit);background:var(--crit-bg);border-color:color-mix(in srgb,var(--crit) 30%,transparent)"><span>⚠</span><span>'+off+' SIM'+(off===1?'':'s')+' offline. Create a diagnostic task from the row.</span></div>';
-    html+='<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>Paste your SIM portal API doc and we’ll wire live status, data usage and auto-tasks here.</span></div>';
+    html+='<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>Live status and usage will sync from the 1oT Terminal API (server-side job, next phase).</span></div>';
     html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>ICCID</th><th>Vehicle</th><th>Client</th><th>Network</th><th>Last seen</th><th>Data</th><th>Status</th><th></th></tr></thead><tbody>';
-    db.sims.forEach(function(s){
-      html+='<tr><td class="tnum cellmuted">'+esc(s.iccid)+'</td><td style="font-weight:600">'+esc(s.vehicle)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.net)+'</td><td class="tnum">'+esc(s.lastseen)+'</td><td class="tnum">'+esc(s.data)+'</td><td>'+simBadge(s.status)+'</td><td>'+(s.status==="offline"?'<button class="btn btn--sm" data-simtask="'+s.id+'">Create task</button>':'')+'</td></tr>';
-    });
+    if(!db.sims.length) html+='<tr><td colspan="8"><div class="empty">No SIMs yet</div></td></tr>';
+    db.sims.forEach(function(s){ html+='<tr><td class="tnum cellmuted">'+esc(s.iccid)+'</td><td style="font-weight:600">'+esc(s.vehicle)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.net)+'</td><td class="tnum">'+esc(s.lastseen)+'</td><td class="tnum">'+esc(s.data)+'</td><td>'+simBadge(s.status)+'</td><td>'+(s.status==="offline"?'<button class="btn btn--sm" data-simtask="'+s.id+'">Create task</button>':'')+'</td></tr>'; });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-simtask]").forEach(function(b){ b.onclick=function(){ var s=db.sims.find(function(x){return x.id===b.dataset.simtask;}); quickOfflineTask(s); }; });
   }
 
-  /* ---- Reports ---- */
+  /* ---------------- Reports ---------------- */
   function renderReports(){
-    var perTech=db.users.filter(function(u){return u.role==="technician";}).map(function(t){
-      var inst=db.installs.filter(function(i){return i.tech===t.id&&i.status==="completed";}).length+(t.id==="t1"?6:t.id==="t2"?4:3);
-      var tasks=db.tasks.filter(function(k){return k.tech===t.id;}).length+(t.id==="t1"?9:t.id==="t2"?7:5);
-      return { name:t.name, inst:inst, tasks:tasks };
-    });
-    var maxInst=Math.max.apply(null,perTech.map(function(p){return p.inst;}));
-    var maxTask=Math.max.apply(null,perTech.map(function(p){return p.tasks;}));
-    var months=[["Jul",14],["Aug",17],["Sep",13],["Oct",21],["Nov",8]]; var maxM=Math.max.apply(null,months.map(function(m){return m[1];}));
-    var html='<div class="grid grid--2">'
-      +'<div class="card"><div class="card__head"><h3>Installations per technician</h3><div class="spacer"></div><span class="cellmuted">This month</span></div><div class="card__body">'
+    var techs=db.users.filter(function(u){return u.role==="technician";});
+    var perTech=techs.map(function(t){ var inst=db.installs.filter(function(i){return i.tech===t.id&&i.status==="completed";}).length; var tasks=db.tasks.filter(function(k){return k.tech===t.id;}).length; return { name:t.name||t.init, inst:inst, tasks:tasks }; });
+    if(!perTech.length) perTech=[{name:"—",inst:0,tasks:0}];
+    var maxInst=Math.max(1,Math.max.apply(null,perTech.map(function(p){return p.inst;})));
+    var maxTask=Math.max(1,Math.max.apply(null,perTech.map(function(p){return p.tasks;})));
+    var html='<div class="grid grid--2"><div class="card"><div class="card__head"><h3>Installations per technician</h3><div class="spacer"></div><span class="cellmuted">Completed</span></div><div class="card__body">'
       +perTech.map(function(p){var w=Math.round(p.inst/maxInst*100);return '<div class="barrow"><div class="nm">'+esc(p.name)+'</div><div class="bartrack"><div class="barfill" style="width:'+w+'%"></div></div><div class="vv tnum">'+p.inst+'</div></div>';}).join('')+'</div></div>'
-      +'<div class="card"><div class="card__head"><h3>Tasks closed per technician</h3></div><div class="card__body">'
+      +'<div class="card"><div class="card__head"><h3>Tasks per technician</h3></div><div class="card__body">'
       +perTech.map(function(p){var w=Math.round(p.tasks/maxTask*100);return '<div class="barrow"><div class="nm">'+esc(p.name)+'</div><div class="bartrack"><div class="barfill" style="width:'+w+'%;background:var(--info)"></div></div><div class="vv tnum">'+p.tasks+'</div></div>';}).join('')+'</div></div></div>'
-      +'<div class="card" style="margin-top:16px"><div class="card__head"><h3>Installations by month</h3><div class="spacer"></div><span class="cellmuted">Nov month-to-date</span></div><div class="card__body"><div style="display:flex;align-items:flex-end;gap:16px;height:160px;padding:10px 4px">'
-      +months.map(function(m){var h=Math.round(m[1]/maxM*130);return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px"><div class="tnum" style="font-size:12px;font-weight:600">'+m[1]+'</div><div style="width:100%;max-width:46px;height:'+h+'px;background:var(--brand-red);border-radius:6px 6px 0 0"></div><div class="cellmuted">'+m[0]+'</div></div>';}).join('')+'</div></div></div>'
-      +'<div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Reports are a placeholder — we’ll finalise these once the rest of the system is locked. Figures mix live prototype records with seeded history.</span></div>';
+      +'<div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Reports read live from your records and will grow as the team logs work.</span></div>';
     view.innerHTML=html;
   }
 
-  /* ---- Team ---- */
+  /* ---------------- Team ---------------- */
   function renderTeam(){
     var html='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Name</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody>';
-    db.users.forEach(function(u){
-      html+='<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="width:30px;height:30px">'+esc(u.init)+'</span><div><div style="font-weight:600">'+esc(u.name+" "+u.surname)+'</div></div></div></td>'
-        +'<td>'+(u.role==="admin"?'<span class="badge b-info">Admin</span>':'<span class="badge b-neutral">Technician</span>')+'</td>'
-        +'<td><div class="pills">'+(u.role==="admin"?'<span class="pill">Full access</span>':u.perms.map(function(p){var m=MODULES.find(function(x){return x.id===p;});return '<span class="pill">'+esc(m?m.label:p)+'</span>';}).join(''))+'</div></td>'
-        +'<td>'+(u.role==="admin"?'':'<button class="btn btn--sm" data-edituser="'+u.id+'">Edit</button>')+'</td></tr>';
-    });
-    html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Use the “Viewing as” switch at the bottom-left to see the system through any user’s permissions.</span></div>';
+    db.users.forEach(function(u){ html+='<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="width:30px;height:30px">'+esc(u.init)+'</span><div style="font-weight:600">'+esc((u.name+" "+u.surname).trim())+'</div></div></td><td>'+(u.role==="admin"?'<span class="badge b-info">Admin</span>':'<span class="badge b-neutral">Technician</span>')+'</td><td><div class="pills">'+(u.role==="admin"?'<span class="pill">Full access</span>':u.perms.map(function(p){var m=MODULES.find(function(x){return x.id===p;});return '<span class="pill">'+esc(m?m.label:p)+'</span>';}).join(''))+'</div></td><td><button class="btn btn--sm" data-edituser="'+u.id+'">Edit</button></td></tr>'; });
+    html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>You can edit roles and access here. Creating a new login needs a secure invite step — that’s the next piece to wire.</span></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-edituser]").forEach(function(b){ b.onclick=function(){ openUserForm(b.dataset.edituser); }; });
   }
   function openUserForm(id){
-    var u = id ? user(id) : null;
+    var u=id?user(id):null;
+    if(!u){ openModal("New user", '<div class="inline-note warn"><span>ⓘ</span><span>Creating a staff login requires a secure server-side invite (so the new person sets their own password). That’s the next integration — for now, add users from the Supabase dashboard, then set their access here.</span></div>', [{label:"OK",cls:"btn btn--primary",fn:closeModal}]); return; }
     var editable=MODULES.filter(function(m){return m.id!=="team";});
-    var body='<div class="form-2"><div class="form-row"><label class="lbl">First name</label><input id="uf-name" value="'+esc(u?u.name:'')+'"></div><div class="form-row"><label class="lbl">Surname</label><input id="uf-surname" value="'+esc(u?u.surname:'')+'"></div></div>'
-      +'<div class="form-row"><label class="lbl">Role</label><select id="uf-role"><option value="technician"'+(!u||u.role==="technician"?' selected':'')+'>Technician</option><option value="admin"'+(u&&u.role==="admin"?' selected':'')+'>Admin (full access)</option></select></div>'
-      +'<div class="form-row" id="uf-permsrow"><label class="lbl">What they can access</label><div class="checks" id="uf-perms">'+editable.map(function(m){var on=u?u.perms.indexOf(m.id)>=0:(m.id==="dashboard"||m.id==="tasks"||m.id==="installs");return '<label class="check"><input type="checkbox" value="'+m.id+'"'+(on?' checked':'')+'><span>'+esc(m.label)+'</span></label>';}).join('')+'</div></div>'
-      +'<div class="inline-note"><span>ⓘ</span><span>Technicians only see the modules you tick. Admins get everything, including Team.</span></div>';
-    openModal(u?"Edit user":"New user", body, [
-      { label:"Cancel", cls:"btn", fn:closeModal },
-      { label:u?"Save":"Create user", cls:"btn btn--primary", fn:function(){
-          var name=document.getElementById("uf-name").value.trim(); var sur=document.getElementById("uf-surname").value.trim();
-          if(!name){ toast("Enter a first name"); return; }
-          var role=document.getElementById("uf-role").value;
-          var perms = role==="admin" ? ALL_PERMS.slice() : Array.prototype.slice.call(document.querySelectorAll("#uf-perms input:checked")).map(function(x){return x.value;});
-          var init=(name[0]||"")+(sur[0]||""); init=init.toUpperCase()||"U";
-          if(u){ u.name=name; u.surname=sur; u.role=role; u.perms=perms; u.init=init; toast("User updated"); }
-          else { db.users.push({ id:uid("u"), name:name, surname:sur, init:init, role:role, perms:perms }); toast("User created · invite email sent"); }
-          save(); renderViewAs(); renderNav(); closeModal(); renderTeam();
-        } }
-    ]);
+    var body='<div class="form-2"><div class="form-row"><label class="lbl">First name</label><input id="uf-name" value="'+esc(u.name)+'"></div><div class="form-row"><label class="lbl">Surname</label><input id="uf-surname" value="'+esc(u.surname)+'"></div></div>'
+      +'<div class="form-row"><label class="lbl">Role</label><select id="uf-role"><option value="technician"'+(u.role==="technician"?' selected':'')+'>Technician</option><option value="admin"'+(u.role==="admin"?' selected':'')+'>Admin (full access)</option></select></div>'
+      +'<div class="form-row" id="uf-permsrow"><label class="lbl">What they can access</label><div class="checks" id="uf-perms">'+editable.map(function(m){var on=u.perms.indexOf(m.id)>=0;return '<label class="check"><input type="checkbox" value="'+m.id+'"'+(on?' checked':'')+'><span>'+esc(m.label)+'</span></label>';}).join('')+'</div></div>';
+    openModal("Edit user", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Save", cls:"btn btn--primary", fn:function(){
+          var name=document.getElementById("uf-name").value.trim(), sur=document.getElementById("uf-surname").value.trim(), role=document.getElementById("uf-role").value;
+          var perms=role==="admin"?ALL_PERMS.slice():Array.prototype.slice.call(document.querySelectorAll("#uf-perms input:checked")).map(function(x){return x.value;});
+          var init=((name[0]||"")+(sur[0]||"")).toUpperCase()||"U";
+          u.name=name; u.surname=sur; u.role=role; u.perms=perms; u.init=init;
+          P.updateProfile(u.id,{ first_name:name, last_name:sur, initials:init, role:role, module_access:perms });
+          renderNav(); if(u.id===db.currentUser) renderUser(); closeModal(); toast("User updated"); renderTeam();
+        } } ]);
     syncChecks("uf-perms");
-    var roleSel=document.getElementById("uf-role");
-    roleSel.onchange=function(){ document.getElementById("uf-permsrow").style.display = roleSel.value==="admin" ? "none" : ""; };
-    roleSel.onchange();
+    var roleSel=document.getElementById("uf-role"); roleSel.onchange=function(){ document.getElementById("uf-permsrow").style.display=roleSel.value==="admin"?"none":""; }; roleSel.onchange();
   }
-  function syncChecks(wrapId){
-    var wrap=document.getElementById(wrapId); if(!wrap) return;
-    wrap.querySelectorAll(".check").forEach(function(l){ var inp=l.querySelector("input"); function up(){ l.classList.toggle("on",inp.checked); } inp.addEventListener("change",up); up(); });
-  }
+  function syncChecks(wrapId){ var wrap=document.getElementById(wrapId); if(!wrap)return; wrap.querySelectorAll(".check").forEach(function(l){ var inp=l.querySelector("input"); function up(){ l.classList.toggle("on",inp.checked); } inp.addEventListener("change",up); up(); }); }
 
-  /* Modal */
+  /* ---------------- Modal ---------------- */
   var modalEl=null;
   function openModal(title, bodyHtml, actions){
     closeModal(); _sigClear=null;
@@ -945,24 +709,56 @@
     document.body.appendChild(modalEl);
     var foot=modalEl.querySelector(".modal__foot");
     (actions||[]).forEach(function(a){ var b=document.createElement("button"); b.className=a.cls; b.textContent=a.label; b.onclick=a.fn; foot.appendChild(b); });
-    modalEl.querySelector(".modal-sheet__scrim").onclick=closeModal;
-    modalEl.querySelector(".modal__x").onclick=closeModal;
+    modalEl.querySelector(".modal-sheet__scrim").onclick=closeModal; modalEl.querySelector(".modal__x").onclick=closeModal;
     document.body.style.overflow="hidden";
   }
   function closeModal(){ if(modalEl){ modalEl.remove(); modalEl=null; document.body.style.overflow=""; } }
   document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeModal(); });
 
-  /* Rail (mobile) */
+  /* ---------------- Rail (mobile) ---------------- */
   function openRail(){ document.getElementById("rail").classList.add("is-open"); document.getElementById("scrim").classList.add("is-on"); }
   function closeRail(){ document.getElementById("rail").classList.remove("is-open"); document.getElementById("scrim").classList.remove("is-on"); }
-  document.getElementById("burger").onclick=openRail;
-  document.getElementById("scrim").onclick=closeRail;
-
-  /* View-as */
-  document.getElementById("viewAs").onchange=function(){ db.currentUser=this.value; save(); renderViewAs(); if(!can(route)) route=cur().perms[0]||"dashboard"; go(route); toast("Now viewing as "+uName(db.currentUser)); };
-
-  /* Boot */
+  document.getElementById("burger").onclick=openRail; document.getElementById("scrim").onclick=closeRail;
+  document.getElementById("newbtn").onclick=function(){ PAGE[route].fn(); };
   document.getElementById("nav").addEventListener("click",function(e){ var b=e.target.closest("[data-nav]"); if(b) go(b.dataset.nav); });
-  renderViewAs(); renderNav(); go("dashboard");
+  document.getElementById("signout").onclick=async function(){ await API.signOut(); location.reload(); };
+
+  /* ---------------- Auth + boot ---------------- */
+  function showLogin(msg){
+    document.getElementById("bootScreen").hidden=true;
+    document.getElementById("app").hidden=true;
+    var l=document.getElementById("login"); l.hidden=false;
+    var err=document.getElementById("loginErr"); if(msg){ err.textContent=msg; err.hidden=false; } else err.hidden=true;
+  }
+  async function loadAndStart(){
+    document.getElementById("login").hidden=true;
+    var boot=document.getElementById("bootScreen"); boot.hidden=false; boot.textContent="Loading your data…";
+    var me=await API.myProfile();
+    if(!me){ showLogin("Could not load your profile. Contact your admin."); return; }
+    var raw=await API.loadAll(); mapAll(raw);
+    if(!db.users.find(function(u){return u.id===me.id;})) db.users.push({ id:me.id, name:me.first_name||"", surname:me.last_name||"", init:me.initials||"U", role:me.role, perms:me.module_access||[], phone:me.phone });
+    db.currentUser=me.id;
+    boot.hidden=true; document.getElementById("app").hidden=false;
+    renderUser(); renderNav(); go(cur().perms[0]||"dashboard");
+  }
+  document.getElementById("loginForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    var username=document.getElementById("loginUser").value.trim().toLowerCase(); var pass=document.getElementById("loginPass").value;
+    if(!username||!pass){ showLogin("Enter your username and password."); return; }
+    var btn=document.getElementById("loginBtn"); btn.disabled=true; btn.textContent="Signing in…";
+    var email=username.indexOf("@")>=0?username:(username+"@"+EMAIL_DOMAIN);
+    var r=await API.signIn(email,pass);
+    btn.disabled=false; btn.textContent="Sign in";
+    if(r.error){ showLogin("Wrong username or password."); return; }
+    loadAndStart();
+  });
+  async function boot(){
+    if(!API){ document.getElementById("bootScreen").textContent="Config error — check js/config.js"; return; }
+    var s=await API.currentSession();
+    if(s && s.data && s.data.session){ loadAndStart(); } else { showLogin(); }
+  }
+  boot();
 })();
 </script>
+</body>
+</html>
