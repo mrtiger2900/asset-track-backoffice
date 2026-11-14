@@ -5,6 +5,8 @@
 -- ============================================================================
 
 create extension if not exists "pgcrypto";
+-- Allow functions to reference tables defined later in this same script.
+set check_function_bodies = off;
 
 -- ----------------------------------------------------------------------------
 -- Enums
