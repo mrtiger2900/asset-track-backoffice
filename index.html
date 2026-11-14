@@ -314,7 +314,7 @@
   /* ---------------- Persist (write-through) ---------------- */
   function warn(r, msg){ if(r && r.error){ console.error(r.error); toast((msg||"Save failed")+": "+r.error.message); return false; } return true; }
   var P = {
-    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")) return r.data; return null; },
+    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech||null, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")) return r.data; return null; },
     updateTask: async function(id,patch){ warn(await API.updateTask(id,patch),"Couldn't update task"); },
     reassign: async function(id,tech){ warn(await API.reassignTask(id,tech),"Couldn't reassign"); },
     addComment: async function(taskId,body){ var r=await API.addComment({ task_id:taskId, author_id:db.currentUser, body:body }); warn(r,"Couldn't add comment"); return r.data; },
@@ -325,7 +325,7 @@
     createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
     updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
     createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; },
-    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
+    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech||null, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
     stopRecurrence: async function(id){ warn(await API.stopRecurrence(id),"Couldn't stop repeat"); }
   };
 
@@ -462,7 +462,7 @@
   function renderComments(cs){ if(!cs.length)return '<div class="empty" style="padding:16px">No comments yet</div>'; return cs.map(function(c){ return '<div class="comment"><div class="avatar">'+esc(c.who)+'</div><div><div class="comment__who">'+esc(c.who)+'<span>'+esc(c.when)+'</span></div><div class="comment__txt">'+esc(c.txt)+'</div></div></div>'; }).join(''); }
   function openTaskForm(pre){
     pre=pre||{};
-    var techs=db.users.filter(function(u){return u.role==="technician";});
+    var techs=db.users.slice().sort(function(a,b){return (a.role==="technician"?0:1)-(b.role==="technician"?0:1);});
     var body='<div class="form-row"><label class="lbl">Task title</label><input id="f-title" value="'+esc(pre.title||'')+'" placeholder="e.g. Check SD cards — Paper Group"></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Client</label><select id="f-client">'+db.clients.map(function(c){return '<option'+(pre.client===c.name?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
       +'<div class="form-row"><label class="lbl">Assign to</label><select id="f-tech">'+techs.map(function(u){return '<option value="'+u.id+'">'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
@@ -542,7 +542,7 @@
     _sigClear=function(){ ctx.clearRect(0,0,canvas.width,canvas.height); ink=false; }; ready(function(){ return ink; });
   }
   function openInstallForm(){
-    var techs=db.users.filter(function(u){return u.role==="technician";});
+    var techs=db.users.slice().sort(function(a,b){return (a.role==="technician"?0:1)-(b.role==="technician"?0:1);});
     var body='<div class="form-row"><label class="lbl">Client</label><div class="seg" id="n-mode"><button type="button" class="on" data-mode="existing">Existing client</button><button type="button" data-mode="new">New client</button></div></div>'
       +'<div id="n-existing"><div class="form-row"><label class="lbl">Select client</label><select id="n-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div></div>'
       +'<div id="n-new" hidden><div class="form-row"><label class="lbl">Client name</label><input id="n-cname" placeholder="Company name"></div></div>'
