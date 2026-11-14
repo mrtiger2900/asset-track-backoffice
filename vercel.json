@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "outputDirectory": "public",
+  "functions": {
+    "api/create-user.js": { "maxDuration": 10 }
+  },
   "headers": [
     {
       "source": "/(.*)",
