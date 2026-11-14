@@ -1,0 +1,14 @@
+# Secrets & local config
+public/js/config.js
+.env
+.env.local
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Node (if you add tooling later)
+node_modules/
+dist/
