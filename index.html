@@ -286,7 +286,7 @@
 
   /* ---------------- Load & map ---------------- */
   function mapAll(raw){
-    db.clients = (raw.clients||[]).map(function(c){ return { id:c.id, name:c.name, industry:c.industry||"—", contact:c.contact_name||"—", phone:c.contact_phone||"—", fleet:c.fleet_size||0, products:c.products||[], expires:c.contract_expires||"—" }; });
+    db.clients = (raw.clients||[]).map(function(c){ return { id:c.id, name:c.name, industry:c.industry||"—", email:c.email||"", contact:c.contact_name||"—", phone:c.contact_phone||"—", fleet:c.fleet_size||0, products:c.products||[], expires:c.contract_expires||"—" }; });
     clientIdByName={}; clientNameById={};
     db.clients.forEach(function(c){ clientIdByName[c.name]=c.id; clientNameById[c.id]=c.name; });
     var vSim={}; (raw.sims||[]).forEach(function(s){ if(s.vehicle_id){ vSim[s.vehicle_id]={ state:s.state==="offline"?"offline":((s.data_today_mb||0)>150?"high":"active"), iccid:s.iccid }; } });
@@ -320,7 +320,7 @@
     addComment: async function(taskId,body){ var r=await API.addComment({ task_id:taskId, author_id:db.currentUser, body:body }); warn(r,"Couldn't add comment"); return r.data; },
     createInstall: async function(a){ var r=await API.createInstall({ ref:a.ref, client_id:clientIdByName[a.client]||null, vehicle_reg:a.vehicle, contact_name:a.contact, contact_phone:a.phone, job_type:INSTALL_ENUM[a.type]||"new_install", scheduled_date:a.date||null, scheduled_time:a.time||null, location:a.loc, assigned_to:a.tech, status:"scheduled", created_by:db.currentUser }); if(warn(r,"Couldn't schedule installation")) return r.data; return null; },
     updateInstall: async function(id,patch){ warn(await API.updateInstall(id,patch),"Couldn't update installation"); },
-    createClient: async function(a){ var r=await API.createClient({ name:a.name, industry:a.industry, contact_name:a.contact, contact_phone:a.phone, fleet_size:a.fleet, products:a.products, created_by:db.currentUser }); if(warn(r,"Couldn't add client")){ clientIdByName[a.name]=r.data.id; clientNameById[r.data.id]=a.name; return r.data; } return null; },
+    createClient: async function(a){ var r=await API.createClient({ name:a.name, industry:a.industry, email:a.email||null, contact_name:a.contact, contact_phone:a.phone, fleet_size:a.fleet, products:a.products, created_by:db.currentUser }); if(warn(r,"Couldn't add client")){ clientIdByName[a.name]=r.data.id; clientNameById[r.data.id]=a.name; return r.data; } return null; },
     moveStock: async function(itemId,type,qty,clientName,purpose,note){ warn(await API.moveStock({ item_id:itemId, movement_type:type, quantity:qty, client_id:clientIdByName[clientName]||null, performed_by:db.currentUser, purpose:purpose, note:note||null }),"Couldn't record movement"); },
     createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
     updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
@@ -553,9 +553,9 @@
   /* ---------------- Clients ---------------- */
   function renderClients(){
     var html='<div class="toolbar"><div class="spacer"></div><button class="btn btn--sm" id="c-import"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>Import vehicles (CSV)</button></div>'
-      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Client</th><th>Industry</th><th>Fleet</th><th>Products</th><th>Renews</th></tr></thead><tbody>';
+      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Client</th><th>Email</th><th>Phone</th><th>Fleet</th><th>Products</th></tr></thead><tbody>';
     if(!db.clients.length) html+='<tr><td colspan="5"><div class="empty">No clients yet</div></td></tr>';
-    db.clients.forEach(function(c){ var exp=c.expires&&c.expires!=="—"&&c.expires<"2026-12-01"; html+='<tr class="clickable" data-client="'+c.id+'"><td style="font-weight:600">'+esc(c.name)+'</td><td>'+esc(c.industry)+'</td><td class="tnum">'+c.fleet+'</td><td><div class="pills">'+c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join('')+'</div></td><td>'+(exp?'<span class="badge b-warn">'+esc(c.expires)+'</span>':'<span class="tnum">'+esc(c.expires)+'</span>')+'</td></tr>'; });
+    db.clients.forEach(function(c){ html+='<tr class="clickable" data-client="'+c.id+'"><td style="font-weight:600">'+esc(c.name)+'</td><td>'+(c.email?'<a href="mailto:'+esc(c.email)+'" onclick="event.stopPropagation()">'+esc(c.email)+'</a>':'<span class="cellmuted">—</span>')+'</td><td>'+(c.phone&&c.phone!=="—"?esc(c.phone):'<span class="cellmuted">—</span>')+'</td><td class="tnum">'+c.fleet+'</td><td><div class="pills">'+c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join('')+'</div></td></tr>'; });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-client]").forEach(function(r){ r.onclick=function(){ openClient(r.dataset.client); }; });
@@ -565,7 +565,7 @@
     var c=db.clients.find(function(x){return x.id===id;}); if(!c)return;
     var openTasks=db.tasks.filter(function(t){return t.client===c.name&&t.status!=="done";});
     var history=db.installs.filter(function(i){return i.client===c.name;}).sort(function(a,b){return (a.date||"")<(b.date||"")?1:-1;});
-    var body='<div class="detail-grid" style="margin-bottom:8px">'+field("Industry",c.industry)+field("Fleet size",c.fleet+" vehicles")+field("Contact",c.contact)+field("Phone",c.phone)+field("Contract renews",c.expires)+'</div>'
+    var body='<div class="detail-grid" style="margin-bottom:8px">'+field("Email",c.email||"—")+field("Phone",c.phone)+field("Fleet size",c.fleet+" vehicles")+field("Contact",c.contact)+field("Industry",c.industry)+field("Contract renews",c.expires)+'</div>'
       +'<div class="section-title">Products</div><div class="pills">'+(c.products.length?c.products.map(function(p){return '<span class="pill">'+esc(p)+'</span>';}).join(''):'<span class="cellmuted">—</span>')+'</div>'
       +'<div class="section-title">Open tasks ('+openTasks.length+')</div>'+(openTasks.length?openTasks.map(function(t){return '<div class="alert"><span class="alert__dot" style="background:var(--brand-red)"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+(t.due?'due '+esc(t.due)+' · ':'')+uInit(t.tech)+'</div></div></div>';}).join(''):'<div class="cellmuted" style="padding:4px 0">No open tasks</div>')
       +'<div class="section-title">Service history</div><div class="timeline">'+(history.length?history.map(function(i){return '<div class="tl-item"><div class="tl-date">'+esc(i.date)+' · '+esc(i.ref)+'</div><div class="tl-title">'+esc(i.type)+' — '+esc(i.vehicle)+' ('+STATUS_LABEL[i.status]+')</div></div>';}).join(''):'<div class="cellmuted">No service records</div>')+'</div>';
@@ -575,14 +575,15 @@
   function openClientForm(){
     var body='<div class="form-row"><label class="lbl">Client name</label><input id="cf-name" placeholder="Company name"></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Industry</label><input id="cf-industry" placeholder="e.g. Cold chain"></div><div class="form-row"><label class="lbl">Fleet size</label><input id="cf-fleet" type="number" min="0" value="1"></div></div>'
-      +'<div class="form-2"><div class="form-row"><label class="lbl">Contact person</label><input id="cf-contact" placeholder="Name"></div><div class="form-row"><label class="lbl">Phone</label><input id="cf-phone" placeholder="+267 …"></div></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Email</label><input id="cf-email" type="email" placeholder="name@company.co.bw"></div><div class="form-row"><label class="lbl">Phone</label><input id="cf-phone" placeholder="+267 …"></div></div>'
+      +'<div class="form-row"><label class="lbl">Contact person</label><input id="cf-contact" placeholder="Name (optional)"></div>'
       +'<div class="form-row"><label class="lbl">Products</label><div class="checks" id="cf-products">'+PRODUCTS.map(function(p){return '<label class="check"><input type="checkbox" value="'+esc(p)+'"'+(p==="GPS tracking"?' checked':'')+'><span>'+esc(p)+'</span></label>';}).join('')+'</div></div>';
     openModal("New client", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Add client", cls:"btn btn--primary", fn:async function(){
           var name=document.getElementById("cf-name").value.trim(); if(!name){ toast("Enter a client name"); return; }
           var products=Array.prototype.slice.call(document.querySelectorAll("#cf-products input:checked")).map(function(x){return x.value;}); if(!products.length) products=["GPS tracking"];
-          var a={ name:name, industry:document.getElementById("cf-industry").value||"—", contact:document.getElementById("cf-contact").value||"—", phone:document.getElementById("cf-phone").value||"—", fleet:parseInt(document.getElementById("cf-fleet").value||"0",10), products:products };
+          var a={ name:name, industry:document.getElementById("cf-industry").value||"—", email:document.getElementById("cf-email").value.trim(), contact:document.getElementById("cf-contact").value||"—", phone:document.getElementById("cf-phone").value||"—", fleet:parseInt(document.getElementById("cf-fleet").value||"0",10), products:products };
           closeModal(); var row=await P.createClient(a); if(!row) return;
-          db.clients.unshift({ id:row.id, name:a.name, industry:a.industry, contact:a.contact, phone:a.phone, fleet:a.fleet, products:a.products, expires:"—" });
+          db.clients.unshift({ id:row.id, name:a.name, industry:a.industry, email:a.email, contact:a.contact, phone:a.phone, fleet:a.fleet, products:a.products, expires:"—" });
           toast("Client added"); renderClients();
         } } ]);
     syncChecks("cf-products");
