@@ -63,6 +63,18 @@
 
     // ---- Team -------------------------------------------------------------
     async updateProfile(id, patch) { return client.from("profiles").update(patch).eq("id", id).select().single(); },
+    async createUser(payload) {
+      var sess = (await client.auth.getSession()).data.session;
+      var token = sess && sess.access_token;
+      var res = await fetch("/api/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + (token || "") },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json().catch(function(){ return {}; });
+      if (!res.ok) return { error: { message: (data && data.error) || ("Request failed (" + res.status + ")") } };
+      return { data: data };
+    },
 
     // ---- SIMs (the 1oT sync target) --------------------------------------
     async upsertSims(rows)         { return client.from("sims").upsert(rows, { onConflict: "iccid" }); }

@@ -321,7 +321,8 @@
     createClient: async function(a){ var r=await API.createClient({ name:a.name, industry:a.industry, contact_name:a.contact, contact_phone:a.phone, fleet_size:a.fleet, products:a.products, created_by:db.currentUser }); if(warn(r,"Couldn't add client")){ clientIdByName[a.name]=r.data.id; clientNameById[r.data.id]=a.name; return r.data; } return null; },
     moveStock: async function(itemId,type,qty,clientName,purpose,note){ warn(await API.moveStock({ item_id:itemId, movement_type:type, quantity:qty, client_id:clientIdByName[clientName]||null, performed_by:db.currentUser, purpose:purpose, note:note||null }),"Couldn't record movement"); },
     createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
-    updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); }
+    updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
+    createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; }
   };
 
   /* ---------------- Nav ---------------- */
@@ -732,24 +733,43 @@
   function renderTeam(){
     var html='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Name</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody>';
     db.users.forEach(function(u){ html+='<tr><td><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="width:30px;height:30px">'+esc(u.init)+'</span><div style="font-weight:600">'+esc((u.name+" "+u.surname).trim())+'</div></div></td><td>'+(u.role==="admin"?'<span class="badge b-info">Admin</span>':'<span class="badge b-neutral">Technician</span>')+'</td><td><div class="pills">'+(u.role==="admin"?'<span class="pill">Full access</span>':u.perms.map(function(p){var m=MODULES.find(function(x){return x.id===p;});return '<span class="pill">'+esc(m?m.label:p)+'</span>';}).join(''))+'</div></td><td><button class="btn btn--sm" data-edituser="'+u.id+'">Edit</button></td></tr>'; });
-    html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>You can edit roles and access here. Creating a new login needs a secure invite step — that’s the next piece to wire.</span></div>';
+    html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Use <b>New user</b> to create a login (username + temporary password) and set exactly what they can access. Admins automatically see every module.</span></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-edituser]").forEach(function(b){ b.onclick=function(){ openUserForm(b.dataset.edituser); }; });
   }
   function openUserForm(id){
     var u=id?user(id):null;
-    if(!u){ openModal("New user", '<div class="inline-note warn"><span>ⓘ</span><span>Creating a staff login requires a secure server-side invite (so the new person sets their own password). That’s the next integration — for now, add users from the Supabase dashboard, then set their access here.</span></div>', [{label:"OK",cls:"btn btn--primary",fn:closeModal}]); return; }
+    var creating=!u;
     var editable=MODULES.filter(function(m){return m.id!=="team";});
-    var body='<div class="form-2"><div class="form-row"><label class="lbl">First name</label><input id="uf-name" value="'+esc(u.name)+'"></div><div class="form-row"><label class="lbl">Surname</label><input id="uf-surname" value="'+esc(u.surname)+'"></div></div>'
-      +'<div class="form-row"><label class="lbl">Role</label><select id="uf-role"><option value="technician"'+(u.role==="technician"?' selected':'')+'>Technician</option><option value="admin"'+(u.role==="admin"?' selected':'')+'>Admin (full access)</option></select></div>'
-      +'<div class="form-row" id="uf-permsrow"><label class="lbl">What they can access</label><div class="checks" id="uf-perms">'+editable.map(function(m){var on=u.perms.indexOf(m.id)>=0;return '<label class="check"><input type="checkbox" value="'+m.id+'"'+(on?' checked':'')+'><span>'+esc(m.label)+'</span></label>';}).join('')+'</div></div>';
-    openModal("Edit user", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Save", cls:"btn btn--primary", fn:function(){
-          var name=document.getElementById("uf-name").value.trim(), sur=document.getElementById("uf-surname").value.trim(), role=document.getElementById("uf-role").value;
+    var head=creating
+      ? '<div class="form-2"><div class="form-row"><label class="lbl">Username</label><input id="uf-username" placeholder="e.g. katlao" autocapitalize="off" autocorrect="off" spellcheck="false"></div><div class="form-row"><label class="lbl">Temporary password</label><input id="uf-password" type="text" placeholder="min 6 characters"></div></div>'
+        +'<div class="inline-note" style="margin:0 0 14px"><span>ⓘ</span><span>They sign in with this username and password. Ask them to change the password after first login.</span></div>'
+      : '';
+    var body=head
+      +'<div class="form-2"><div class="form-row"><label class="lbl">First name</label><input id="uf-name" value="'+esc(u?u.name:"")+'"></div><div class="form-row"><label class="lbl">Surname</label><input id="uf-surname" value="'+esc(u?u.surname:"")+'"></div></div>'
+      +'<div class="form-row"><label class="lbl">Phone (optional)</label><input id="uf-phone" value="'+esc(u&&u.phone?u.phone:"")+'" placeholder="+267…"></div>'
+      +'<div class="form-row"><label class="lbl">Role</label><select id="uf-role"><option value="technician"'+(u&&u.role==="technician"?' selected':'')+'>Technician</option><option value="admin"'+(u&&u.role==="admin"?' selected':'')+'>Admin (full access)</option></select></div>'
+      +'<div class="form-row" id="uf-permsrow"><label class="lbl">What they can access</label><div class="checks" id="uf-perms">'+editable.map(function(m){var on=u?u.perms.indexOf(m.id)>=0:(m.id==="dashboard"||m.id==="tasks"||m.id==="installs");return '<label class="check"><input type="checkbox" value="'+m.id+'"'+(on?' checked':'')+'><span>'+esc(m.label)+'</span></label>';}).join('')+'</div></div>';
+    openModal(creating?"New user":"Edit user", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:creating?"Create user":"Save", cls:"btn btn--primary", fn:async function(){
+          var name=document.getElementById("uf-name").value.trim(), sur=document.getElementById("uf-surname").value.trim(), role=document.getElementById("uf-role").value, phone=document.getElementById("uf-phone").value.trim();
           var perms=role==="admin"?ALL_PERMS.slice():Array.prototype.slice.call(document.querySelectorAll("#uf-perms input:checked")).map(function(x){return x.value;});
+          if(perms.indexOf("dashboard")<0) perms.unshift("dashboard");
           var init=((name[0]||"")+(sur[0]||"")).toUpperCase()||"U";
-          u.name=name; u.surname=sur; u.role=role; u.perms=perms; u.init=init;
-          P.updateProfile(u.id,{ first_name:name, last_name:sur, initials:init, role:role, module_access:perms });
-          renderNav(); if(u.id===db.currentUser) renderUser(); closeModal(); toast("User updated"); renderTeam();
+          if(creating){
+            var username=document.getElementById("uf-username").value.trim().toLowerCase().replace(/\s+/g,""), pw=document.getElementById("uf-password").value;
+            if(!username){ toast("Enter a username"); return; }
+            if(pw.length<6){ toast("Password must be at least 6 characters"); return; }
+            if(!name){ toast("Enter a first name"); return; }
+            var btn=this; var old=btn.textContent; btn.textContent="Creating…"; btn.disabled=true;
+            var res=await P.createUser({ username:username, password:pw, first_name:name, last_name:sur, phone:phone, role:role, module_access:perms });
+            if(!res){ btn.textContent=old; btn.disabled=false; return; }
+            db.users.push({ id:res.id, name:name, surname:sur, init:init, role:role, perms:perms, phone:phone });
+            closeModal(); toast("User created · "+username); renderTeam();
+          } else {
+            u.name=name; u.surname=sur; u.role=role; u.perms=perms; u.init=init; u.phone=phone;
+            P.updateProfile(u.id,{ first_name:name, last_name:sur, initials:init, role:role, module_access:perms, phone:phone||null });
+            renderNav(); if(u.id===db.currentUser) renderUser(); closeModal(); toast("User updated"); renderTeam();
+          }
         } } ]);
     syncChecks("uf-perms");
     var roleSel=document.getElementById("uf-role"); roleSel.onchange=function(){ document.getElementById("uf-permsrow").style.display=roleSel.value==="admin"?"none":""; }; roleSel.onchange();
