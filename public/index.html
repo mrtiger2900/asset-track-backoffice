@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Asset Track Back-Office</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <style>
   :root {
     --brand-red: #e31e24; --brand-red-ink: #b3161b;
@@ -184,6 +186,8 @@
   .login { position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; background: var(--bg); padding:20px; }
   .login__card { width:100%; max-width:360px; background: var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow: var(--shadow); padding:28px 24px; }
   .login__brand { display:flex; align-items:center; gap:11px; margin-bottom:22px; }
+  .login__logo { background:#fff; border-radius:12px; padding:16px 18px; margin-bottom:20px; display:flex; justify-content:center; border:1px solid var(--line); }
+  .login__logo img { width:100%; max-width:220px; height:auto; display:block; }
   .login h2 { font-size:18px; } .login .sub { font-size:12px; color:var(--fg-dim); }
   .login__err { font-size:12.5px; color:var(--crit); background:var(--crit-bg); border:1px solid color-mix(in srgb,var(--crit) 30%,transparent); border-radius:8px; padding:9px 11px; margin-bottom:12px; }
   .login__boot { position:fixed; inset:0; z-index:95; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--fg-dim); font-size:13px; }
@@ -206,7 +210,7 @@
 
 <div class="login" id="login" hidden>
   <form class="login__card" id="loginForm">
-    <div class="login__brand"><div class="logo-mark"></div><div><div class="brand-name">Asset&nbsp;Track</div><div class="brand-sub">Back-Office</div></div></div>
+    <div class="login__logo"><img src="/img/logo.png" alt="Asset Track"></div>
     <h2>Sign in</h2>
     <div class="sub" style="margin-bottom:18px">Enter your username and password.</div>
     <div class="login__err" id="loginErr" hidden></div>
@@ -252,7 +256,7 @@
 
   var MODULES = [
     { id:"dashboard", label:"Dashboard" }, { id:"tasks", label:"Tasks" }, { id:"installs", label:"Installations" },
-    { id:"clients", label:"Clients" }, { id:"inventory", label:"Inventory" }, { id:"sims", label:"SIM cards" },
+    { id:"clients", label:"Clients" }, { id:"vehicles", label:"Vehicles" }, { id:"inventory", label:"Inventory" }, { id:"sims", label:"SIM cards" },
     { id:"reports", label:"Reports" }, { id:"team", label:"Team" }
   ];
   var ALL_PERMS = MODULES.map(function(m){return m.id;});
@@ -283,15 +287,16 @@
     db.clients = (raw.clients||[]).map(function(c){ return { id:c.id, name:c.name, industry:c.industry||"—", contact:c.contact_name||"—", phone:c.contact_phone||"—", fleet:c.fleet_size||0, products:c.products||[], expires:c.contract_expires||"—" }; });
     clientIdByName={}; clientNameById={};
     db.clients.forEach(function(c){ clientIdByName[c.name]=c.id; clientNameById[c.id]=c.name; });
-    db.vehicles = (raw.vehicles||[]);
-    vehicleRegById={}; db.vehicles.forEach(function(v){ vehicleRegById[v.id]=v.registration; });
+    var vSim={}; (raw.sims||[]).forEach(function(s){ if(s.vehicle_id){ vSim[s.vehicle_id]={ state:s.state==="offline"?"offline":((s.data_today_mb||0)>150?"high":"active"), iccid:s.iccid }; } });
+    db.vehicles = (raw.vehicles||[]).map(function(v){ return { id:v.id, registration:v.registration, client:clientNameById[v.client_id]||"—", make_model:v.make_model||"—", tracker:v.tracker_serial||"—", active:v.active!==false, sim:vSim[v.id]||null }; });
+    vehicleRegById={}; (raw.vehicles||[]).forEach(function(v){ vehicleRegById[v.id]=v.registration; });
     db.users = (raw.profiles||[]).map(function(p){ return { id:p.id, name:p.first_name||"", surname:p.last_name||"", init:p.initials||"U", role:p.role, perms:p.module_access||[], phone:p.phone }; });
 
     var commentsByTask={};
     (raw.task_comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1;}).forEach(function(c){
       (commentsByTask[c.task_id]=commentsByTask[c.task_id]||[]).push({ who:(user(c.author_id)||{}).init||"·", txt:c.body, when:fmtDate(c.created_at) });
     });
-    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:clientNameById[t.client_id]||"—", tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, comments:commentsByTask[t.id]||[] }; });
+    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:clientNameById[t.client_id]||"—", tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
 
     db.installs = (raw.installations||[]).map(function(i){ return { id:i.id, ref:i.ref, client:clientNameById[i.client_id]||i.vehicle_reg||"—", contact:i.contact_name||"—", phone:i.contact_phone||"—", vehicle:i.vehicle_reg||(vehicleRegById[i.vehicle_id]||"—"), type:INSTALL_LABEL[i.job_type]||i.job_type, date:i.scheduled_date||"", time:(i.scheduled_time||"").slice(0,5), loc:i.location||"—", tech:i.assigned_to, status:i.status, photos:0, signed:!!i.signed }; });
 
@@ -320,12 +325,13 @@
   };
 
   /* ---------------- Nav ---------------- */
-  var NAV_GROUPS = [ { label:"Overview", items:["dashboard"] }, { label:"Operations", items:["tasks","installs","clients"] }, { label:"Assets", items:["inventory","sims"] }, { label:"Insight", items:["reports"] }, { label:"Admin", items:["team"] } ];
+  var NAV_GROUPS = [ { label:"Overview", items:["dashboard"] }, { label:"Operations", items:["tasks","installs","clients","vehicles"] }, { label:"Assets", items:["inventory","sims"] }, { label:"Insight", items:["reports"] }, { label:"Admin", items:["team"] } ];
   var NAV_ICON = {
     dashboard:'<path d="M3 13h8V3H3zM13 21h8V8h-8zM3 21h8v-6H3zM13 3v3h8V3z"/>',
     tasks:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
     installs:'<path d="M3 7h18M3 12h18M3 17h18"/>',
     clients:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+    vehicles:'<path d="M1 6h14v9H1z"/><path d="M15 9h4l3 3v3h-7z"/><circle cx="5.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',
     inventory:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12l8.73-5.04"/>',
     sims:'<path d="M5 3h10l4 4v14H5z"/><path d="M9 13h6M9 17h6M9 9h2"/>',
     reports:'<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>',
@@ -353,6 +359,7 @@
     tasks:{t:"Tasks",c:"Operations",btn:"New task",fn:function(){ openTaskForm(); }},
     installs:{t:"Installations",c:"Operations",btn:"New installation",fn:function(){ openInstallForm(); }},
     clients:{t:"Clients",c:"Operations",btn:"New client",fn:function(){ openClientForm(); }},
+    vehicles:{t:"Vehicles",c:"Operations",btn:"Import CSV",fn:function(){ openCsvImport(); }},
     inventory:{t:"Inventory",c:"Assets",btn:"Add item",fn:function(){ openItemForm(); }},
     sims:{t:"SIM cards",c:"Assets",btn:"Sync portal",fn:function(){ toast("SIM sync runs server-side (1oT API) — wiring next."); }},
     reports:{t:"Reports",c:"Insight",btn:"Export",fn:function(){ toast("Report export — coming soon"); }},
@@ -363,7 +370,7 @@
     document.getElementById("newbtn").style.display=(r==="sims"||r==="reports")?"none":"";
     renderNav(); render(); closeRail(); window.scrollTo(0,0);
   }
-  function render(){ ({ dashboard:renderDashboard, tasks:renderTasks, installs:renderInstalls, clients:renderClients, inventory:renderInventory, sims:renderSims, reports:renderReports, team:renderTeam }[route])(); }
+  function render(){ ({ dashboard:renderDashboard, tasks:renderTasks, installs:renderInstalls, clients:renderClients, vehicles:renderVehicles, inventory:renderInventory, sims:renderSims, reports:renderReports, team:renderTeam }[route])(); }
 
   function taskStatusBadge(t){ if(isOverdue(t))return '<span class="badge b-crit"><span class="d"></span>Overdue</span>'; if(t.status==="done")return '<span class="badge b-good"><span class="d"></span>Completed</span>'; if(t.status==="in_progress")return '<span class="badge b-warn"><span class="d"></span>In progress</span>'; return '<span class="badge b-info"><span class="d"></span>Open</span>'; }
   function prioBadge(p){ return '<span class="badge prio-'+p+'">'+cap(p)+'</span>'; }
@@ -452,14 +459,17 @@
       +'<div class="form-row"><label class="lbl">Assign to</label><select id="f-tech">'+techs.map(function(u){return '<option value="'+u.id+'">'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Due date</label><input id="f-due" type="date" value="'+TODAY+'"></div><div class="form-row"><label class="lbl">Priority</label><select id="f-prio"><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="urgent"'+(pre.prio==="urgent"?' selected':'')+'>Urgent</option></select></div></div>'
       +'<div class="form-row"><label class="lbl">Recurring</label><select id="f-rec"><option value="">One-off</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option></select></div>'
-      +'<div class="inline-note"><span>ⓘ</span><span>The assigned technician gets a WhatsApp + email with the details once notifications are wired.</span></div>';
+      +'<div class="form-row"><label class="lbl">Note (optional)</label><textarea id="f-note" rows="2" placeholder="e.g. reg B 902 DLR · has dash cams + diesel tracking"></textarea></div>'
+      +'<div class="inline-note"><span>ⓘ</span><span>The note becomes the first comment on the task. The assigned technician gets a WhatsApp + email once notifications are wired.</span></div>';
     openModal("New task", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Create task", cls:"btn btn--primary", fn:async function(){
           var title=document.getElementById("f-title").value.trim(); if(!title){ toast("Add a task title"); return; }
           var tech=document.getElementById("f-tech").value;
           var a={ title:title, client:document.getElementById("f-client").value, tech:tech, due:document.getElementById("f-due").value, prio:document.getElementById("f-prio").value, recurring:document.getElementById("f-rec").value||null };
+          var note=document.getElementById("f-note").value.trim();
           closeModal(); var row=await P.createTask(a); if(!row) return;
-          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, comments:[] });
-          renderNav(); toast("Task created · notification queued for "+uFirst(tech)); go("tasks");
+          var comments=[]; if(note){ comments.push({who:cur().init,txt:note,when:"Just now"}); P.addComment(row.id,note); }
+          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, comments:comments, created_at:new Date().toISOString(), done_at:null });
+          renderNav(); toast("Task created"+(note?" with note":"")+" · for "+uFirst(tech)); go("tasks");
         } } ]);
   }
   function quickOfflineTask(s){ openTaskForm({ title:"Investigate offline tracker — "+s.vehicle, client:s.client, prio:"urgent" }); }
@@ -657,18 +667,64 @@
     view.querySelectorAll("[data-simtask]").forEach(function(b){ b.onclick=function(){ var s=db.sims.find(function(x){return x.id===b.dataset.simtask;}); quickOfflineTask(s); }; });
   }
 
+  /* ---------------- Vehicles ---------------- */
+  function renderVehicles(){
+    var online=db.vehicles.filter(function(v){return v.sim&&v.sim.state!=="offline";}).length;
+    var offline=db.vehicles.filter(function(v){return v.sim&&v.sim.state==="offline";}).length;
+    var noSim=db.vehicles.filter(function(v){return !v.sim;}).length;
+    var html='<div class="kpis">'
+      +kpi("Total vehicles",db.vehicles.length,'','across '+db.clients.length+' clients')
+      +kpi("Online",online,'','reporting now')
+      +kpi("Offline",offline,'',offline?'<span class="down">Check trackers</span>':'All reporting')
+      +kpi("No SIM linked",noSim,'','awaiting pairing')
+    +'</div>'
+      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Registration</th><th>Client</th><th>Make / model</th><th>Tracker serial</th><th>SIM status</th></tr></thead><tbody>';
+    if(!db.vehicles.length) html+='<tr><td colspan="5"><div class="empty">No vehicles yet — import your vehicle CSV to populate this.</div></td></tr>';
+    db.vehicles.forEach(function(v){
+      var sim = v.sim ? (v.sim.state==="offline"?'<span class="badge b-crit"><span class="d"></span>Offline</span>':v.sim.state==="high"?'<span class="badge b-warn"><span class="d"></span>High usage</span>':'<span class="badge b-good"><span class="d"></span>Online</span>') : '<span class="cellmuted">No SIM</span>';
+      html+='<tr><td style="font-weight:600">'+esc(v.registration)+'</td><td>'+esc(v.client)+'</td><td>'+esc(v.make_model)+'</td><td class="cellmuted">'+esc(v.tracker)+'</td><td>'+sim+'</td></tr>';
+    });
+    html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Vehicles populate from the weekly CSV import (Import CSV above or on the Clients page). Each links to its client and SIM.</span></div>';
+    view.innerHTML=html;
+  }
+
   /* ---------------- Reports ---------------- */
   function renderReports(){
+    var tasks=db.tasks, installs=db.installs;
+    var openTasks=tasks.filter(function(t){return t.status!=="done";});
+    var doneTasks=tasks.filter(function(t){return t.status==="done";});
+    var overdue=tasks.filter(isOverdue);
+    var incompleteInstalls=installs.filter(function(i){return i.status!=="completed";});
+    var clientsWithOpen={}; openTasks.forEach(function(t){ clientsWithOpen[t.client]=(clientsWithOpen[t.client]||0)+1; });
+    var clientNames=Object.keys(clientsWithOpen).sort(function(a,b){return clientsWithOpen[b]-clientsWithOpen[a];});
+    var avgOpenPerClient=db.clients.length?(openTasks.length/db.clients.length):0;
+    var days=[]; for(var d=6;d>=0;d--){ var dt=new Date(); dt.setDate(dt.getDate()-d); days.push({ key:dt.toISOString().slice(0,10), label:dt.toLocaleDateString(undefined,{weekday:'short'}), n:0 }); }
+    doneTasks.forEach(function(t){ var k=(t.done_at||"").slice(0,10); var b=days.find(function(x){return x.key===k;}); if(b) b.n++; });
+    var maxDay=Math.max(1,Math.max.apply(null,days.map(function(x){return x.n;})));
     var techs=db.users.filter(function(u){return u.role==="technician";});
-    var perTech=techs.map(function(t){ var inst=db.installs.filter(function(i){return i.tech===t.id&&i.status==="completed";}).length; var tasks=db.tasks.filter(function(k){return k.tech===t.id;}).length; return { name:t.name||t.init, inst:inst, tasks:tasks }; });
-    if(!perTech.length) perTech=[{name:"—",inst:0,tasks:0}];
-    var maxInst=Math.max(1,Math.max.apply(null,perTech.map(function(p){return p.inst;})));
-    var maxTask=Math.max(1,Math.max.apply(null,perTech.map(function(p){return p.tasks;})));
-    var html='<div class="grid grid--2"><div class="card"><div class="card__head"><h3>Installations per technician</h3><div class="spacer"></div><span class="cellmuted">Completed</span></div><div class="card__body">'
-      +perTech.map(function(p){var w=Math.round(p.inst/maxInst*100);return '<div class="barrow"><div class="nm">'+esc(p.name)+'</div><div class="bartrack"><div class="barfill" style="width:'+w+'%"></div></div><div class="vv tnum">'+p.inst+'</div></div>';}).join('')+'</div></div>'
-      +'<div class="card"><div class="card__head"><h3>Tasks per technician</h3></div><div class="card__body">'
-      +perTech.map(function(p){var w=Math.round(p.tasks/maxTask*100);return '<div class="barrow"><div class="nm">'+esc(p.name)+'</div><div class="bartrack"><div class="barfill" style="width:'+w+'%;background:var(--info)"></div></div><div class="vv tnum">'+p.tasks+'</div></div>';}).join('')+'</div></div></div>'
-      +'<div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Reports read live from your records and will grow as the team logs work.</span></div>';
+    var perTech=techs.map(function(t){ return { name:(t.name+" "+t.surname).trim()||t.init, open:tasks.filter(function(k){return k.tech===t.id&&k.status!=="done";}).length, done:tasks.filter(function(k){return k.tech===t.id&&k.status==="done";}).length, inst:installs.filter(function(i){return i.tech===t.id&&i.status==="completed";}).length }; });
+    function kpiR(l,v,m,cls){ return '<div class="kpi"><div class="kpi__label">'+l+'</div><div class="kpi__val tnum">'+v+'</div><div class="kpi__meta'+(cls?' '+cls:'')+'">'+m+'</div></div>'; }
+    var html='<div class="kpis">'
+      +kpiR("Open tasks",openTasks.length,overdue.length?overdue.length+' overdue':'none overdue',overdue.length?'down':'')
+      +kpiR("Completed tasks",doneTasks.length,'all time')
+      +kpiR("Avg open / client",avgOpenPerClient.toFixed(1),'across '+db.clients.length+' clients')
+      +kpiR("Incomplete installs",incompleteInstalls.length,'scheduled + in progress')
+      +kpiR("Vehicles",db.vehicles.length,'tracked')
+      +kpiR("SIMs offline",db.sims.filter(function(s){return s.status==="offline";}).length,'needs attention')
+    +'</div><div class="grid grid--2">'
+      +'<div class="card"><div class="card__head"><h3>Outstanding tasks per client</h3></div><div class="card__body">'
+      +(clientNames.length?clientNames.map(function(n){ var w=Math.round(clientsWithOpen[n]/Math.max(1,clientsWithOpen[clientNames[0]])*100); return '<div class="barrow"><div class="nm">'+esc(n)+'</div><div class="bartrack"><div class="barfill" style="width:'+w+'%"></div></div><div class="vv tnum">'+clientsWithOpen[n]+'</div></div>'; }).join(''):'<div class="empty">No open tasks</div>')
+      +'</div></div>'
+      +'<div class="card"><div class="card__head"><h3>Tasks closed per day</h3><div class="spacer"></div><span class="cellmuted">Last 7 days</span></div><div class="card__body"><div style="display:flex;align-items:flex-end;gap:10px;height:150px;padding:10px 4px">'
+      +days.map(function(x){ var h=Math.round(x.n/maxDay*120); return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><div class="tnum" style="font-size:12px;font-weight:600">'+x.n+'</div><div style="width:100%;max-width:34px;height:'+Math.max(2,h)+'px;background:var(--brand-red);border-radius:5px 5px 0 0"></div><div class="cellmuted">'+x.label+'</div></div>'; }).join('')
+      +'</div></div></div></div>'
+      +'<div class="card" style="margin-top:16px"><div class="card__head"><h3>Technician workload</h3></div><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Technician</th><th>Open tasks</th><th>Completed</th><th>Installs done</th></tr></thead><tbody>'
+      +(perTech.length?perTech.map(function(p){ return '<tr><td style="font-weight:600">'+esc(p.name)+'</td><td class="tnum">'+p.open+'</td><td class="tnum">'+p.done+'</td><td class="tnum">'+p.inst+'</td></tr>'; }).join(''):'<tr><td colspan="4"><div class="empty">No technicians yet</div></td></tr>')
+      +'</tbody></table></div></div></div>'
+      +'<div class="card" style="margin-top:16px"><div class="card__head"><h3>Installations by status</h3></div><div class="card__body">'
+      +['scheduled','in_progress','completed'].map(function(st){ var n=installs.filter(function(i){return i.status===st;}).length; var w=Math.round(n/Math.max(1,installs.length)*100); return '<div class="barrow"><div class="nm">'+STATUS_LABEL[st]+'</div><div class="bartrack"><div class="barfill" style="width:'+w+'%;background:'+(st==="completed"?'var(--good)':st==="in_progress"?'var(--warn)':'var(--info)')+'"></div></div><div class="vv tnum">'+n+'</div></div>'; }).join('')
+      +'</div></div>'
+      +'<div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Reports read live from your records — they fill out as the team logs tasks and installations.</span></div>';
     view.innerHTML=html;
   }
 
