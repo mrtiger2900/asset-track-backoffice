@@ -298,7 +298,7 @@
     (raw.task_comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1;}).forEach(function(c){
       (commentsByTask[c.task_id]=commentsByTask[c.task_id]||[]).push({ who:(user(c.author_id)||{}).init||"·", txt:c.body, when:fmtDate(c.created_at) });
     });
-    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:clientNameById[t.client_id]||"—", tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, recId:t.recurrence_id||null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
+    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:t.all_clients?"All clients":(clientNameById[t.client_id]||"—"), allClients:!!t.all_clients, tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, recId:t.recurrence_id||null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
 
     db.installs = (raw.installations||[]).map(function(i){ return { id:i.id, ref:i.ref, client:clientNameById[i.client_id]||i.vehicle_reg||"—", contact:i.contact_name||"—", phone:i.contact_phone||"—", vehicle:i.vehicle_reg||(vehicleRegById[i.vehicle_id]||"—"), type:INSTALL_LABEL[i.job_type]||i.job_type, date:i.scheduled_date||"", time:(i.scheduled_time||"").slice(0,5), loc:i.location||"—", tech:i.assigned_to, status:i.status, photos:0, signed:!!i.signed }; });
 
@@ -314,7 +314,7 @@
   /* ---------------- Persist (write-through) ---------------- */
   function warn(r, msg){ if(r && r.error){ console.error(r.error); toast((msg||"Save failed")+": "+r.error.message); return false; } return true; }
   var P = {
-    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech||null, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")) return r.data; return null; },
+    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")) return r.data; return null; },
     updateTask: async function(id,patch){ warn(await API.updateTask(id,patch),"Couldn't update task"); },
     reassign: async function(id,tech){ warn(await API.reassignTask(id,tech),"Couldn't reassign"); },
     addComment: async function(taskId,body){ var r=await API.addComment({ task_id:taskId, author_id:db.currentUser, body:body }); warn(r,"Couldn't add comment"); return r.data; },
@@ -325,7 +325,7 @@
     createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
     updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
     createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; },
-    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:clientIdByName[a.client]||null, assigned_to:a.tech||null, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
+    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
     stopRecurrence: async function(id){ warn(await API.stopRecurrence(id),"Couldn't stop repeat"); }
   };
 
@@ -435,7 +435,7 @@
       +(isAdmin?'':'<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>You only see tasks assigned to you.</span></div>')
       +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
     if(!list.length) html+='<tr><td colspan="6"><div class="empty">No tasks in this view</div></td></tr>';
-    list.forEach(function(t){ html+='<tr class="clickable" data-task="'+t.id+'"><td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off')+'</div></td><td>'+esc(t.client)+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due||"—")+'</td><td>'+prioBadge(t.prio)+'</td><td>'+taskStatusBadge(t)+'</td></tr>'; });
+    list.forEach(function(t){ html+='<tr class="clickable" data-task="'+t.id+'"><td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off')+'</div></td><td>'+(t.allClients?'<span class="badge b-info">🌐 All clients</span>':esc(t.client))+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due||"—")+'</td><td>'+prioBadge(t.prio)+'</td><td>'+taskStatusBadge(t)+'</td></tr>'; });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-tf]").forEach(function(b){ b.onclick=function(){ taskFilter=b.dataset.tf; renderTasks(); }; });
@@ -464,7 +464,7 @@
     pre=pre||{};
     var techs=db.users.slice().sort(function(a,b){return (a.role==="technician"?0:1)-(b.role==="technician"?0:1);});
     var body='<div class="form-row"><label class="lbl">Task title</label><input id="f-title" value="'+esc(pre.title||'')+'" placeholder="e.g. Check SD cards — Paper Group"></div>'
-      +'<div class="form-2"><div class="form-row"><label class="lbl">Client</label><select id="f-client">'+db.clients.map(function(c){return '<option'+(pre.client===c.name?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Client</label><select id="f-client"><option value="__ALL__"'+(pre.allClients?' selected':'')+'>🌐 All clients</option>'+db.clients.map(function(c){return '<option'+(pre.client===c.name?' selected':'')+'>'+esc(c.name)+'</option>';}).join('')+'</select></div>'
       +'<div class="form-row"><label class="lbl">Assign to</label><select id="f-tech">'+techs.map(function(u){return '<option value="'+u.id+'">'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
       +'<div class="form-2"><div class="form-row"><label class="lbl">Due date</label><input id="f-due" type="date" value="'+TODAY+'"></div><div class="form-row"><label class="lbl">Priority</label><select id="f-prio"><option value="medium">Medium</option><option value="low">Low</option><option value="high">High</option><option value="urgent"'+(pre.prio==="urgent"?' selected':'')+'>Urgent</option></select></div></div>'
       +'<div class="form-row"><label class="lbl">Repeat</label><select id="f-rec"><option value="">One-off (just this once)</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option></select><div class="cellmuted" id="f-rec-hint" style="margin-top:6px;display:none"></div></div>'
@@ -473,7 +473,8 @@
     openModal("New task", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Create task", cls:"btn btn--primary", fn:async function(){
           var title=document.getElementById("f-title").value.trim(); if(!title){ toast("Add a task title"); return; }
           var tech=document.getElementById("f-tech").value;
-          var a={ title:title, client:document.getElementById("f-client").value, tech:tech, due:document.getElementById("f-due").value, prio:document.getElementById("f-prio").value, recurring:document.getElementById("f-rec").value||null };
+          var clientSel=document.getElementById("f-client").value, allClients=(clientSel==="__ALL__");
+          var a={ title:title, client:allClients?"All clients":clientSel, allClients:allClients, tech:tech, due:document.getElementById("f-due").value, prio:document.getElementById("f-prio").value, recurring:document.getElementById("f-rec").value||null };
           var note=document.getElementById("f-note").value.trim();
           if(a.recurring){
             a.note=note; closeModal();
@@ -486,7 +487,7 @@
           }
           closeModal(); var row=await P.createTask(a); if(!row) return;
           var comments=[]; if(note){ comments.push({who:cur().init,txt:note,when:"Just now"}); P.addComment(row.id,note); }
-          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, recId:null, comments:comments, created_at:new Date().toISOString(), done_at:null });
+          db.tasks.unshift({ id:row.id, title:a.title, client:a.client, allClients:a.allClients, tech:a.tech, due:a.due, status:"open", prio:a.prio, recurring:a.recurring?cap(a.recurring):null, recId:null, comments:comments, created_at:new Date().toISOString(), done_at:null });
           renderNav(); toast("Task created"+(note?" with note":"")+" · for "+uFirst(tech)); go("tasks");
         } } ]);
     var recSel=document.getElementById("f-rec"), recHint=document.getElementById("f-rec-hint");
