@@ -326,7 +326,8 @@
     updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
     createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; },
     createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
-    stopRecurrence: async function(id){ warn(await API.stopRecurrence(id),"Couldn't stop repeat"); }
+    stopRecurrence: async function(id){ warn(await API.stopRecurrence(id),"Couldn't stop repeat"); },
+    deleteTask: async function(id){ var r=await API.deleteTask(id); if(r&&r.error){ toast("Couldn't delete task"); return false; } return true; }
   };
 
   /* ---------------- Nav ---------------- */
@@ -449,6 +450,7 @@
       +'<div class="form-row"><label class="lbl">Reassign to</label><select id="t-reassign">'+db.users.filter(function(u){return u.role==="technician"||u.id===t.tech;}).map(function(u){return '<option value="'+u.id+'"'+(u.id===t.tech?' selected':'')+'>'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
       +'<div class="section-title">Comments &amp; findings</div><div id="t-comments">'+renderComments(t.comments)+'</div><div class="form-row" style="margin-top:12px"><textarea id="t-newcomment" rows="2" placeholder="Add a finding…"></textarea></div><button class="btn btn--sm" id="t-addcomment">Add comment</button>';
     var actions=[ { label:"Close", cls:"btn", fn:closeModal } ];
+    if(cur() && cur().role==="admin"){ actions.push({ label:"Delete", cls:"btn", fn:function(){ confirmDeleteTask(t); } }); }
     if(t.recId && cur() && cur().role==="admin"){ actions.push({ label:"Stop repeat", cls:"btn", fn:async function(){ await P.stopRecurrence(t.recId); closeModal(); toast("Repeat stopped — no new copies will be created"); } }); }
     actions.push({ label:"Save", cls:"btn btn--primary", fn:function(){
           var newTech=document.getElementById("t-reassign").value, reassigned=newTech!==t.tech, newStatus=document.getElementById("t-status").value;
@@ -458,6 +460,20 @@
         } });
     openModal(t.title, body, actions);
     document.getElementById("t-addcomment").onclick=function(){ var ta=document.getElementById("t-newcomment"); var txt=ta.value.trim(); if(!txt)return; t.comments.push({who:cur().init,txt:txt,when:"Just now"}); P.addComment(t.id,txt); document.getElementById("t-comments").innerHTML=renderComments(t.comments); ta.value=""; toast("Comment added"); };
+  }
+  function confirmDeleteTask(t){
+    var msg = t.recId
+      ? 'Delete <b>'+esc(t.title)+'</b>? This removes the task and <b>stops it repeating</b>, so a new copy won\'t be created again.'
+      : 'Delete <b>'+esc(t.title)+'</b>? This can\'t be undone.';
+    openModal("Delete task", '<div class="inline-note warn"><span>⚠</span><span>'+msg+'</span></div>', [
+      { label:"Cancel", cls:"btn", fn:function(){ openTask(t.id); } },
+      { label:"Delete task", cls:"btn btn--primary", fn:async function(){
+          if(t.recId){ await P.stopRecurrence(t.recId); }
+          var ok=await P.deleteTask(t.id); if(!ok) return;
+          db.tasks=db.tasks.filter(function(x){return x.id!==t.id;});
+          closeModal(); toast("Task deleted"); renderNav(); render();
+        } }
+    ]);
   }
   function renderComments(cs){ if(!cs.length)return '<div class="empty" style="padding:16px">No comments yet</div>'; return cs.map(function(c){ return '<div class="comment"><div class="avatar">'+esc(c.who)+'</div><div><div class="comment__who">'+esc(c.who)+'<span>'+esc(c.when)+'</span></div><div class="comment__txt">'+esc(c.txt)+'</div></div></div>'; }).join(''); }
   function openTaskForm(pre){

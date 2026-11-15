@@ -52,6 +52,7 @@
     async createTask(t)            { return client.from("tasks").insert(t).select().single(); },
     async updateTask(id, patch)    { return client.from("tasks").update(patch).eq("id", id).select().single(); },
     async reassignTask(id, userId) { return client.from("tasks").update({ assigned_to: userId }).eq("id", id); },
+    async deleteTask(id)           { return client.from("tasks").delete().eq("id", id); },
     async addComment(c)            { return client.from("task_comments").insert(c).select().single(); },
 
     // ---- Installations ----------------------------------------------------
