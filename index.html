@@ -325,7 +325,7 @@
     createItem: async function(a){ var r=await API.createItem({ name:a.item, sku:a.sku, category:CAT_ENUM[a.cat]||"other", in_stock:a.instock, min_level:a.min }); if(warn(r,"Couldn't add item")) return r.data; return null; },
     updateProfile: async function(id,patch){ warn(await API.updateProfile(id,patch),"Couldn't update user"); },
     createUser: async function(payload){ var r=await API.createUser(payload); if(warn(r,"Couldn't create user")) return r.data; return null; },
-    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, priority:a.prio, frequency:a.recurring.toLowerCase(), note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
+    createRecurrence: async function(a){ var r=await API.createRecurrence({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, priority:a.prio, frequency:a.recurring.toLowerCase(), anchor_date:a.due||null, note:a.note||null, created_by:db.currentUser }); if(warn(r,"Couldn't set up recurring task")) return r.data; return null; },
     stopRecurrence: async function(id){ warn(await API.stopRecurrence(id),"Couldn't stop repeat"); },
     deleteTask: async function(id){ var r=await API.deleteTask(id); if(r&&r.error){ toast("Couldn't delete task"); return false; } return true; }
   };
@@ -519,8 +519,9 @@
             var tpl=await P.createRecurrence(a); if(!tpl) return;
             try { await API.generateDaily(); } catch(e){}
             var raw=await API.loadAll(); mapAll(raw);
-            var every={Daily:"day",Weekly:"week",Monthly:"month",Quarterly:"quarter"}[a.recurring]||"cycle";
-            renderNav(); toast(a.recurring+" task set up · a fresh one appears every "+every+" for "+uFirst(tech)); go("tasks");
+            var appearedToday=db.tasks.some(function(x){return x.recId===tpl.id && x.due===TODAY;});
+            var msg=a.recurring+" task set up for "+uFirst(tech)+(appearedToday?" · it's in the list now":" · first one appears on "+(a.due||"its day"));
+            renderNav(); toast(msg); go("tasks");
             return;
           }
           closeModal(); var row=await P.createTask(a); if(!row) return;
@@ -529,7 +530,12 @@
           renderNav(); toast("Task created"+(note?" with note":"")+" · for "+uFirst(tech)); go("tasks");
         } } ]);
     var recSel=document.getElementById("f-rec"), recHint=document.getElementById("f-rec-hint");
-    recSel.onchange=function(){ var v=recSel.value; if(v){ recHint.style.display=""; recHint.textContent = v==="Daily" ? "A fresh task is created automatically every morning — it's already waiting when "+uFirst(document.getElementById("f-tech").value)+" logs in." : "A fresh task is created automatically each "+({Weekly:"week",Monthly:"month",Quarterly:"quarter"}[v]||"cycle")+"."; } else { recHint.style.display="none"; } };
+    recSel.onchange=function(){ var v=recSel.value; if(v){ recHint.style.display=""; recHint.textContent = ({
+        Daily:"Repeats every day, starting on the due date above (today by default). Each copy is due the day it appears.",
+        Weekly:"Repeats weekly on the same weekday as the due date above — set the due date to the day you want it to land.",
+        Monthly:"Repeats monthly on the same date as the due date above (e.g. set the 25th for a month-end task).",
+        Quarterly:"Repeats every quarter on the same date as the due date above."
+      }[v]||"A fresh task is created automatically."); } else { recHint.style.display="none"; } };
   }
   function quickOfflineTask(s){ openTaskForm({ title:"Investigate offline tracker — "+s.vehicle, client:s.client, prio:"urgent" }); }
 
