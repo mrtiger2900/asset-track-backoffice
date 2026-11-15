@@ -201,6 +201,23 @@
     .main { margin-left:0; } .hamburger { display:inline-flex; }
     .scrim-overlay.is-on { display:block; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:35; }
   }
+  /* Phones: turn data tables into stacked cards (no sideways scroll) */
+  @media (max-width:600px){
+    .tablewrap { overflow-x:visible; }
+    table.data { min-width:0; display:block; font-size:13.5px; }
+    table.data thead { display:none; }
+    table.data tbody, table.data tr, table.data td { display:block; width:auto; }
+    table.data tr { border:1px solid var(--line); border-radius:12px; margin:0 0 10px; padding:3px 0; background:var(--surface); }
+    table.data tr:last-child { margin-bottom:0; }
+    table.data tr.clickable:hover td { background:transparent; }
+    table.data td { border:0; border-bottom:1px solid var(--line); padding:9px 14px; display:flex; align-items:center; justify-content:space-between; gap:14px; text-align:right; overflow-wrap:anywhere; }
+    table.data tr td:last-child { border-bottom:0; }
+    table.data td::before { content:attr(data-label); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--fg-dim); font-weight:600; text-align:left; flex:0 0 auto; }
+    table.data td:first-child { flex-direction:column; align-items:stretch; text-align:left; gap:3px; padding-top:11px; }
+    table.data td:first-child > div { text-align:left; }
+    table.data td[colspan]{ justify-content:center; } table.data td[colspan]::before{ display:none; }
+    table.data td .pills { justify-content:flex-end; }
+  }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -376,7 +393,15 @@
     document.getElementById("newbtn").style.display=(r==="sims"||r==="reports")?"none":"";
     renderNav(); render(); closeRail(); window.scrollTo(0,0);
   }
-  function render(){ ({ dashboard:renderDashboard, tasks:renderTasks, installs:renderInstalls, clients:renderClients, vehicles:renderVehicles, inventory:renderInventory, sims:renderSims, reports:renderReports, team:renderTeam }[route])(); }
+  function render(){ ({ dashboard:renderDashboard, tasks:renderTasks, installs:renderInstalls, clients:renderClients, vehicles:renderVehicles, inventory:renderInventory, sims:renderSims, reports:renderReports, team:renderTeam }[route])(); labelTables(); }
+  function labelTables(){
+    document.querySelectorAll("table.data").forEach(function(tbl){
+      var ths=[].map.call(tbl.querySelectorAll("thead th"), function(th){ return th.textContent.trim(); });
+      [].forEach.call(tbl.querySelectorAll("tbody tr"), function(tr){
+        [].forEach.call(tr.children, function(td,i){ if(!td.hasAttribute("colspan") && ths[i]!==undefined) td.setAttribute("data-label", ths[i]); });
+      });
+    });
+  }
 
   function taskStatusBadge(t){ if(isOverdue(t))return '<span class="badge b-crit"><span class="d"></span>Overdue</span>'; if(t.status==="done")return '<span class="badge b-good"><span class="d"></span>Completed</span>'; if(t.status==="in_progress")return '<span class="badge b-warn"><span class="d"></span>In progress</span>'; return '<span class="badge b-info"><span class="d"></span>Open</span>'; }
   function prioBadge(p){ return '<span class="badge prio-'+p+'">'+cap(p)+'</span>'; }
