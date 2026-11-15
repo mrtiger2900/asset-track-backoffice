@@ -445,18 +445,40 @@
   function openTask(id){
     var t=db.tasks.find(function(x){return x.id===id;}); if(!t)return;
     var repeatBanner = t.recId ? '<div class="inline-note" style="margin-bottom:12px"><span>🔁</span><span>This is a <b>'+esc(t.recurring||"recurring")+'</b> task — a fresh copy is created automatically and is ready each time '+esc(uFirst(t.tech))+' logs in.'+(cur()&&cur().role==="admin"?' Use <b>Stop repeat</b> below to end it.':'')+'</span></div>' : '';
-    var body=repeatBanner+'<div class="detail-grid" style="margin-bottom:16px">'+field("Client",t.client)+field("Assigned to",uName(t.tech))+field("Due date",t.due||"—")+field("Repeat",t.recurring||"One-off")+'<div class="field"><label>Priority</label><div class="v">'+prioBadge(t.prio)+'</div></div></div>'
-      +'<div class="form-2"><div class="form-row"><label class="lbl">Status</label><select id="t-status">'+['open','in_progress','done'].map(function(s){return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+STATUS_LABEL[s]+'</option>';}).join('')+'</select></div>'
-      +'<div class="form-row"><label class="lbl">Reassign to</label><select id="t-reassign">'+db.users.filter(function(u){return u.role==="technician"||u.id===t.tech;}).map(function(u){return '<option value="'+u.id+'"'+(u.id===t.tech?' selected':'')+'>'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('')+'</select></div></div>'
-      +'<div class="section-title">Comments &amp; findings</div><div id="t-comments">'+renderComments(t.comments)+'</div><div class="form-row" style="margin-top:12px"><textarea id="t-newcomment" rows="2" placeholder="Add a finding…"></textarea></div><button class="btn btn--sm" id="t-addcomment">Add comment</button>';
+    var clientOpts='<option value="__ALL__"'+(t.allClients?' selected':'')+'>🌐 All clients</option>'+db.clients.map(function(c){return '<option'+((!t.allClients&&t.client===c.name)?' selected':'')+'>'+esc(c.name)+'</option>';}).join('');
+    var usersOpts=db.users.slice().sort(function(a,b){return (a.role==="technician"?0:1)-(b.role==="technician"?0:1);}).map(function(u){return '<option value="'+u.id+'"'+(u.id===t.tech?' selected':'')+'>'+esc((u.name+" "+u.surname).trim())+'</option>';}).join('');
+    var body=repeatBanner
+      +'<div class="form-row"><label class="lbl">Task title</label><input id="t-title" value="'+esc(t.title)+'"></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Client</label><select id="t-client">'+clientOpts+'</select></div>'
+      +'<div class="form-row"><label class="lbl">Due date</label><input id="t-due" type="date" value="'+esc(t.due||"")+'"></div></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Priority</label><select id="t-prio">'+['medium','low','high','urgent'].map(function(p){return '<option value="'+p+'"'+(t.prio===p?' selected':'')+'>'+cap(p)+'</option>';}).join('')+'</select></div>'
+      +'<div class="form-row"><label class="lbl">Status</label><select id="t-status">'+['open','in_progress','done'].map(function(s){return '<option value="'+s+'"'+(t.status===s?' selected':'')+'>'+STATUS_LABEL[s]+'</option>';}).join('')+'</select></div></div>'
+      +'<div class="form-row"><label class="lbl">Assigned to</label><select id="t-reassign">'+usersOpts+'</select></div>'
+      +'<div class="section-title">Comments &amp; findings</div><div id="t-comments">'+renderComments(t.comments)+'</div><div class="form-row" style="margin-top:12px"><textarea id="t-newcomment" rows="2" placeholder="Add a finding or note… (e.g. list the clients to invoice)"></textarea></div><button class="btn btn--sm" id="t-addcomment">Add comment</button>';
     var actions=[ { label:"Close", cls:"btn", fn:closeModal } ];
     if(cur() && cur().role==="admin"){ actions.push({ label:"Delete", cls:"btn", fn:function(){ confirmDeleteTask(t); } }); }
     if(t.recId && cur() && cur().role==="admin"){ actions.push({ label:"Stop repeat", cls:"btn", fn:async function(){ await P.stopRecurrence(t.recId); closeModal(); toast("Repeat stopped — no new copies will be created"); } }); }
     actions.push({ label:"Save", cls:"btn btn--primary", fn:function(){
+          // never lose an unsaved comment sitting in the box
+          var pend=document.getElementById("t-newcomment").value.trim();
+          if(pend){ t.comments.push({who:cur().init,txt:pend,when:"Just now"}); P.addComment(t.id,pend); document.getElementById("t-newcomment").value=""; }
+
+          var newTitle=document.getElementById("t-title").value.trim()||t.title;
+          var clientSel=document.getElementById("t-client").value, allCl=(clientSel==="__ALL__"), newClientName=allCl?"All clients":clientSel;
+          var newDue=document.getElementById("t-due").value, newPrio=document.getElementById("t-prio").value;
           var newTech=document.getElementById("t-reassign").value, reassigned=newTech!==t.tech, newStatus=document.getElementById("t-status").value;
+
+          var patch={};
+          if(newTitle!==t.title){ patch.title=newTitle; t.title=newTitle; }
+          if(allCl!==!!t.allClients || (!allCl && newClientName!==t.client)){ patch.all_clients=allCl; patch.client_id=allCl?null:(clientIdByName[newClientName]||null); t.allClients=allCl; t.client=newClientName; }
+          if((newDue||"")!==(t.due||"")){ patch.due_date=newDue||null; t.due=newDue; }
+          if(newPrio!==t.prio){ patch.priority=newPrio; t.prio=newPrio; }
+          if(newStatus!==t.status){ patch.status=newStatus; patch.completed_at=newStatus==="done"?new Date().toISOString():null; t.status=newStatus; }
+
           if(reassigned){ var oldName=uFirst(t.tech); t.tech=newTech; t.comments.push({who:cur().init,txt:"Task passed from "+oldName+" to "+uFirst(newTech)+".",when:"Just now"}); P.reassign(t.id,newTech); P.addComment(t.id,"Task passed from "+oldName+" to "+uFirst(newTech)+"."); }
-          if(newStatus!==t.status){ t.status=newStatus; P.updateTask(t.id,{status:newStatus, completed_at:newStatus==="done"?new Date().toISOString():null}); }
-          renderNav(); closeModal(); toast(reassigned?("Task passed to "+uFirst(newTech)+" · notification sent"):"Task updated"); render();
+          if(Object.keys(patch).length){ P.updateTask(t.id,patch); }
+
+          renderNav(); closeModal(); toast(reassigned?("Task passed to "+uFirst(newTech)):"Task saved"); render();
         } });
     openModal(t.title, body, actions);
     document.getElementById("t-addcomment").onclick=function(){ var ta=document.getElementById("t-newcomment"); var txt=ta.value.trim(); if(!txt)return; t.comments.push({who:cur().init,txt:txt,when:"Just now"}); P.addComment(t.id,txt); document.getElementById("t-comments").innerHTML=renderComments(t.comments); ta.value=""; toast("Comment added"); };
