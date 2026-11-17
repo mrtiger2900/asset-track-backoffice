@@ -441,8 +441,8 @@
       +kpi("Installations",installsWk,'',todays.length+" scheduled today",false,{nav:"installs"})
       +kpi("Low stock",lowStock,'',lowStock?'<span class="down">Reorder due</span>':'Stock healthy',false,{nav:"inventory"})
     +'</div><div class="grid grid--2">'
-      +'<div class="card"><div class="card__head"><h3>'+(isAdmin?'All open tasks':'My tasks')+'</h3><div class="spacer"></div><span class="badge b-neutral">'+(isAdmin?openT:myTasks.length)+'</span></div><div class="card__body">'
-      + ((isAdmin?db.tasks.filter(function(t){return t.status!=="done";}):myTasks).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+(isAdmin?' · '+esc(uFirst(t.tech)):'')+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">Nothing assigned to you</div>')
+      +'<div class="card"><div class="card__head"><h3>All open tasks</h3><div class="spacer"></div><span class="badge b-neutral">'+openT+'</span></div><div class="card__body">'
+      + (db.tasks.filter(function(t){return t.status!=="done";}).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+' · '+esc(uFirst(t.tech))+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">No open tasks</div>')
       +'</div></div><div class="card"><div class="card__head"><h3>Today’s schedule</h3><div class="spacer"></div>'+(can('installs')?'<button class="link" data-nav="installs">Board</button>':'')+'</div><div class="card__body">'
       + (todays.length? todays.map(function(i){ return '<div class="alert" style="cursor:pointer" data-openinstall="'+i.id+'"><span class="alert__dot" style="background:'+(i.status==="completed"?'var(--good)':i.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(i.time)+' · '+esc(i.client)+'</div><div class="alert__meta">'+esc(i.type)+' · '+esc(i.loc)+' · '+uInit(i.tech)+'</div></div></div>'; }).join('') : '<div class="empty">Nothing scheduled today</div>')
       +'</div></div></div>'
@@ -464,15 +464,13 @@
     var filters=[["all","Active"],["open","Open"],["in_progress","In progress"],["overdue","Overdue"],["done","Completed"]];
     var owners=[["everyone","Everyone"],["mine","My tasks"],["others","Others’ tasks"]];
     var list=db.tasks.slice().sort(function(a,b){return (a.due||"")<(b.due||"")?-1:1;});
-    if(!isAdmin) list=list.filter(function(t){return t.tech===me;});
-    else if(ownerFilter==="mine") list=list.filter(function(t){return t.tech===me;});
+    if(ownerFilter==="mine") list=list.filter(function(t){return t.tech===me;});
     else if(ownerFilter==="others") list=list.filter(function(t){return t.tech!==me;});
     if(taskFilter==="all") list=list.filter(function(t){return t.status!=="done";});
     else if(taskFilter==="overdue") list=list.filter(isOverdue);
     else list=list.filter(function(t){return t.status===taskFilter;});
     var html='<div class="toolbar"><div class="chipset">'+filters.map(function(f){return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div>'
-      +(isAdmin?'<div class="chipset" style="margin-top:8px">'+owners.map(function(o){return '<button class="chip'+(ownerFilter===o[0]?' is-on':'')+'" data-of="'+o[0]+'">'+o[1]+'</button>';}).join('')+'</div>':'')+'</div>'
-      +(isAdmin?'':'<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>You only see tasks assigned to you.</span></div>')
+      +'<div class="chipset" style="margin-top:8px">'+owners.map(function(o){return '<button class="chip'+(ownerFilter===o[0]?' is-on':'')+'" data-of="'+o[0]+'">'+o[1]+'</button>';}).join('')+'</div></div>'
       +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
     if(!list.length) html+='<tr><td colspan="6"><div class="empty">No tasks in this view</div></td></tr>';
     list.forEach(function(t){ html+='<tr class="clickable" data-task="'+t.id+'"><td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off')+'</div></td><td>'+(t.allClients?'<span class="badge b-info">🌐 All clients</span>':esc(t.client))+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due||"—")+'</td><td>'+prioBadge(t.prio)+'</td><td>'+taskStatusBadge(t)+'</td></tr>'; });
