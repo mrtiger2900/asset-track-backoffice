@@ -61,6 +61,7 @@ module.exports = async function handler(req, res){
   const last_name = String(body.last_name || "").trim();
   const role = body.role === "admin" ? "admin" : "technician";
   const phone = String(body.phone || "").trim() || null;
+  const notify_email = String(body.notify_email || "").trim() || null;
   let module_access = Array.isArray(body.module_access) ? body.module_access.filter(m => VALID_MODULES.includes(m)) : [];
   if(role === "admin") module_access = VALID_MODULES.slice();
   if(module_access.indexOf("dashboard") < 0) module_access.unshift("dashboard");
@@ -91,7 +92,7 @@ module.exports = async function handler(req, res){
   const patchRes = await fetch(SUPABASE_URL + "/rest/v1/profiles?id=eq." + newId, {
     method: "PATCH",
     headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + SERVICE_KEY, "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify({ first_name, last_name, initials, role, module_access, phone })
+    body: JSON.stringify({ first_name, last_name, initials, role, module_access, phone, notify_email })
   });
   if(!patchRes.ok){
     const t = await patchRes.text();

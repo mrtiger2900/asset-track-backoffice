@@ -317,7 +317,7 @@
     var vSim={}; (raw.sims||[]).forEach(function(s){ if(s.vehicle_id){ vSim[s.vehicle_id]={ state:s.state==="offline"?"offline":((s.data_today_mb||0)>150?"high":"active"), iccid:s.iccid }; } });
     db.vehicles = (raw.vehicles||[]).map(function(v){ return { id:v.id, registration:v.registration, client:clientNameById[v.client_id]||"—", make_model:v.make_model||"—", tracker:v.tracker_serial||"—", active:v.active!==false, sim:vSim[v.id]||null }; });
     vehicleRegById={}; (raw.vehicles||[]).forEach(function(v){ vehicleRegById[v.id]=v.registration; });
-    db.users = (raw.profiles||[]).map(function(p){ return { id:p.id, name:p.first_name||"", surname:p.last_name||"", init:p.initials||"U", role:p.role, perms:p.module_access||[], phone:p.phone }; });
+    db.users = (raw.profiles||[]).map(function(p){ return { id:p.id, name:p.first_name||"", surname:p.last_name||"", init:p.initials||"U", role:p.role, perms:p.module_access||[], phone:p.phone, notifyEmail:p.notify_email||"" }; });
 
     var commentsByTask={};
     (raw.task_comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1;}).forEach(function(c){
@@ -340,12 +340,15 @@
 
   /* ---------------- Persist (write-through) ---------------- */
   function warn(r, msg){ if(r && r.error){ console.error(r.error); toast((msg||"Save failed")+": "+r.error.message); return false; } return true; }
+  // Fire-and-forget email to a staff member's real inbox (notify_email). Silently
+  // no-ops when they have no deliverable address; the server also logs each send.
+  function notifyTech(techId, subject, lines, relatedTask){ var u=user(techId); if(!u||!u.notifyEmail) return; try { API.sendEmail({ to:u.notifyEmail, subject:subject, title:subject, lines:(lines||[]).filter(Boolean), template:"staff", related_task:relatedTask||null }); } catch(e){} }
   var P = {
-    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")) return r.data; return null; },
+    createTask: async function(a){ var r=await API.createTask({ title:a.title, client_id:a.allClients?null:(clientIdByName[a.client]||null), all_clients:!!a.allClients, assigned_to:a.tech||null, due_date:a.due||null, status:"open", priority:a.prio, recurrence:a.recurring?a.recurring.toLowerCase():"none", created_by:db.currentUser }); if(warn(r,"Couldn't create task")){ if(a.tech) notifyTech(a.tech,"New task assigned: "+a.title,["You've been assigned a task on Asset Track:",a.title,(a.allClients?"All clients":(a.client||"—"))+(a.due?" — due "+a.due:""),"Priority: "+(a.prio||"medium")],r.data&&r.data.id); return r.data; } return null; },
     updateTask: async function(id,patch){ warn(await API.updateTask(id,patch),"Couldn't update task"); },
-    reassign: async function(id,tech){ warn(await API.reassignTask(id,tech),"Couldn't reassign"); },
+    reassign: async function(id,tech){ warn(await API.reassignTask(id,tech),"Couldn't reassign"); var t=db.tasks.find(function(x){return x.id===id;}); if(t&&tech) notifyTech(tech,"Task passed to you: "+t.title,["A task has been passed to you on Asset Track:",t.title,(t.client||"—")+(t.due?" — due "+t.due:"")],id); },
     addComment: async function(taskId,body){ var r=await API.addComment({ task_id:taskId, author_id:db.currentUser, body:body }); warn(r,"Couldn't add comment"); return r.data; },
-    createInstall: async function(a){ var r=await API.createInstall({ ref:a.ref, client_id:clientIdByName[a.client]||null, vehicle_reg:a.vehicle, contact_name:a.contact, contact_phone:a.phone, job_type:INSTALL_ENUM[a.type]||"new_install", scheduled_date:a.date||null, scheduled_time:a.time||null, location:a.loc, assigned_to:a.tech, status:"scheduled", created_by:db.currentUser }); if(warn(r,"Couldn't schedule installation")) return r.data; return null; },
+    createInstall: async function(a){ var r=await API.createInstall({ ref:a.ref, client_id:clientIdByName[a.client]||null, vehicle_reg:a.vehicle, contact_name:a.contact, contact_phone:a.phone, job_type:INSTALL_ENUM[a.type]||"new_install", scheduled_date:a.date||null, scheduled_time:a.time||null, location:a.loc, assigned_to:a.tech, status:"scheduled", created_by:db.currentUser }); if(warn(r,"Couldn't schedule installation")){ if(a.tech) notifyTech(a.tech,"Installation scheduled: "+(a.client||a.ref),["A new installation is scheduled for you:",(a.client||"—")+" · "+(a.type||"install"),((a.date||"")+(a.time?" "+a.time:"")).trim(),a.loc?("Location: "+a.loc):""],null); return r.data; } return null; },
     updateInstall: async function(id,patch){ warn(await API.updateInstall(id,patch),"Couldn't update installation"); },
     createClient: async function(a){ var r=await API.createClient({ name:a.name, industry:a.industry, email:a.email||null, contact_name:a.contact, contact_phone:a.phone, fleet_size:a.fleet, products:a.products, created_by:db.currentUser }); if(warn(r,"Couldn't add client")){ clientIdByName[a.name]=r.data.id; clientNameById[r.data.id]=a.name; return r.data; } return null; },
     moveStock: async function(itemId,type,qty,clientName,purpose,note){ warn(await API.moveStock({ item_id:itemId, movement_type:type, quantity:qty, client_id:clientIdByName[clientName]||null, performed_by:db.currentUser, purpose:purpose, note:note||null }),"Couldn't record movement"); },
@@ -947,11 +950,11 @@
       : '';
     var body=head
       +'<div class="form-2"><div class="form-row"><label class="lbl">First name</label><input id="uf-name" value="'+esc(u?u.name:"")+'"></div><div class="form-row"><label class="lbl">Surname</label><input id="uf-surname" value="'+esc(u?u.surname:"")+'"></div></div>'
-      +'<div class="form-row"><label class="lbl">Phone (optional)</label><input id="uf-phone" value="'+esc(u&&u.phone?u.phone:"")+'" placeholder="+267…"></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Phone (optional)</label><input id="uf-phone" value="'+esc(u&&u.phone?u.phone:"")+'" placeholder="+267…"></div><div class="form-row"><label class="lbl">Notification email</label><input id="uf-notify" type="email" value="'+esc(u&&u.notifyEmail?u.notifyEmail:"")+'" placeholder="real inbox for alerts"></div></div>'
       +'<div class="form-row"><label class="lbl">Role</label><select id="uf-role"><option value="technician"'+(u&&u.role==="technician"?' selected':'')+'>Technician</option><option value="admin"'+(u&&u.role==="admin"?' selected':'')+'>Admin (full access)</option></select></div>'
       +'<div class="form-row" id="uf-permsrow"><label class="lbl">What they can access</label><div class="checks" id="uf-perms">'+editable.map(function(m){var on=u?u.perms.indexOf(m.id)>=0:(m.id==="dashboard"||m.id==="tasks"||m.id==="installs");return '<label class="check"><input type="checkbox" value="'+m.id+'"'+(on?' checked':'')+'><span>'+esc(m.label)+'</span></label>';}).join('')+'</div></div>';
     openModal(creating?"New user":"Edit user", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:creating?"Create user":"Save", cls:"btn btn--primary", fn:async function(){
-          var name=document.getElementById("uf-name").value.trim(), sur=document.getElementById("uf-surname").value.trim(), role=document.getElementById("uf-role").value, phone=document.getElementById("uf-phone").value.trim();
+          var name=document.getElementById("uf-name").value.trim(), sur=document.getElementById("uf-surname").value.trim(), role=document.getElementById("uf-role").value, phone=document.getElementById("uf-phone").value.trim(), notifyEmail=document.getElementById("uf-notify").value.trim();
           var perms=role==="admin"?ALL_PERMS.slice():Array.prototype.slice.call(document.querySelectorAll("#uf-perms input:checked")).map(function(x){return x.value;});
           if(perms.indexOf("dashboard")<0) perms.unshift("dashboard");
           var init=((name[0]||"")+(sur[0]||"")).toUpperCase()||"U";
@@ -961,13 +964,13 @@
             if(pw.length<6){ toast("Password must be at least 6 characters"); return; }
             if(!name){ toast("Enter a first name"); return; }
             var btn=this; var old=btn.textContent; btn.textContent="Creating…"; btn.disabled=true;
-            var res=await P.createUser({ username:username, password:pw, first_name:name, last_name:sur, phone:phone, role:role, module_access:perms });
+            var res=await P.createUser({ username:username, password:pw, first_name:name, last_name:sur, phone:phone, role:role, module_access:perms, notify_email:notifyEmail||null });
             if(!res){ btn.textContent=old; btn.disabled=false; return; }
-            db.users.push({ id:res.id, name:name, surname:sur, init:init, role:role, perms:perms, phone:phone });
+            db.users.push({ id:res.id, name:name, surname:sur, init:init, role:role, perms:perms, phone:phone, notifyEmail:notifyEmail });
             closeModal(); toast("User created · "+username); renderTeam();
           } else {
-            u.name=name; u.surname=sur; u.role=role; u.perms=perms; u.init=init; u.phone=phone;
-            P.updateProfile(u.id,{ first_name:name, last_name:sur, initials:init, role:role, module_access:perms, phone:phone||null });
+            u.name=name; u.surname=sur; u.role=role; u.perms=perms; u.init=init; u.phone=phone; u.notifyEmail=notifyEmail;
+            P.updateProfile(u.id,{ first_name:name, last_name:sur, initials:init, role:role, module_access:perms, phone:phone||null, notify_email:notifyEmail||null });
             renderNav(); if(u.id===db.currentUser) renderUser(); closeModal(); toast("User updated"); renderTeam();
           }
         } } ]);

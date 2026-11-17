@@ -93,6 +93,14 @@
       var data = await res.json().catch(function(){ return {}; });
       if(!res.ok) return { error: { message: (data && data.error) || ("Sync failed (" + res.status + ")") } };
       return { data: data };
+    },
+    async sendEmail(payload) {
+      try {
+        var sess = (await client.auth.getSession()).data.session;
+        var tok = sess && sess.access_token;
+        var res = await fetch("/api/send-email", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + (tok || "") }, body: JSON.stringify(payload) });
+        return await res.json().catch(function(){ return {}; });
+      } catch(e){ return { error: { message: String(e) } }; }
     }
   };
 
