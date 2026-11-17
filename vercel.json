@@ -1,5 +1,8 @@
 {
   "cleanUrls": true,
+  "crons": [
+    { "path": "/api/sim-sync", "schedule": "0 5 * * *" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

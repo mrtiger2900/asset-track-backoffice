@@ -85,7 +85,15 @@
     },
 
     // ---- SIMs (the 1oT sync target) --------------------------------------
-    async upsertSims(rows)         { return client.from("sims").upsert(rows, { onConflict: "iccid" }); }
+    async upsertSims(rows)         { return client.from("sims").upsert(rows, { onConflict: "iccid" }); },
+    async simSync() {
+      var sess = (await client.auth.getSession()).data.session;
+      var tok = sess && sess.access_token;
+      var res = await fetch("/api/sim-sync", { method: "POST", headers: { Authorization: "Bearer " + (tok || "") } });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok) return { error: { message: (data && data.error) || ("Sync failed (" + res.status + ")") } };
+      return { data: data };
+    }
   };
 
   window.AssetTrackAPI = API;

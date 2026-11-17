@@ -335,7 +335,7 @@
     });
     db.inventory = (raw.inventory_items||[]).map(function(v){ return { id:v.id, item:v.name, sku:v.sku||"—", cat:CAT_LABEL[v.category]||v.category, instock:v.in_stock, min:v.min_level, damaged:v.damaged, moves:movesByItem[v.id]||[] }; });
 
-    db.sims = (raw.sims||[]).map(function(s){ var st = s.state==="offline"?"offline":((s.data_today_mb||0)>150?"high":"active"); return { id:s.id, iccid:s.iccid, msisdn:s.msisdn||"—", vehicle:vehicleRegById[s.vehicle_id]||"—", client:clientNameById[s.client_id]||"—", net:s.network||"—", status:st, lastseen:rel(s.last_seen), data:(s.data_today_mb||0)+" MB" }; });
+    db.sims = (raw.sims||[]).map(function(s){ var used=(s.data_used_mb!=null?s.data_used_mb:(s.data_today_mb||0)); var st = s.state==="offline"?"offline":(used>150?"high":"active"); return { id:s.id, iccid:s.iccid, msisdn:s.msisdn||"—", vehicle:vehicleRegById[s.vehicle_id]||"—", client:clientNameById[s.client_id]||"—", net:s.network||"—", status:st, lastseen:rel(s.last_seen), lastdata:rel(s.last_data_session), data:used+" MB", synced:rel(s.synced_at) }; });
   }
 
   /* ---------------- Persist (write-through) ---------------- */
@@ -456,7 +456,7 @@
       +soonR.map(function(s){ var lbl=s.days===0?"today":s.days===1?"tomorrow":"in "+s.days+" days"; return '<div class="alert"><span class="alert__dot" style="background:'+(s.days<=7?"var(--crit)":s.days<=14?"var(--warn)":"var(--info)")+'"></span><div class="alert__body"><div class="alert__title">'+esc(s.reg)+' · '+esc(s.client)+'</div><div class="alert__meta">Expires '+esc(s.expiry)+' · '+lbl+'</div></div><button class="alert__act" data-kpi="1" data-k-nav="tasks" data-k-tf="renewals">Renewals</button></div>'; }).join('')
       +'</div></div>') : '';
     var alerts=[];
-    db.sims.filter(function(s){return s.status==="offline";}).forEach(function(s){ alerts.push({c:"var(--crit)",t:"SIM offline — "+s.vehicle+" ("+s.client+")",m:"No data for "+s.lastseen+" · "+s.iccid,act:"Create task",fn:function(){ quickOfflineTask(s); }}); });
+    db.sims.filter(function(s){return s.status==="offline";}).forEach(function(s){ alerts.push({c:"var(--crit)",t:"SIM offline — "+s.vehicle+" ("+s.client+")",m:"No data since "+s.lastdata+" · "+s.iccid,act:"Create task",fn:function(){ quickOfflineTask(s); }}); });
     db.inventory.filter(function(v){return v.instock<v.min;}).forEach(function(v){ alerts.push({c:"var(--warn)",t:"Low stock — "+v.item,m:v.instock+" in stock · minimum "+v.min,act:"View",fn:function(){ go("inventory"); }}); });
     db.tasks.filter(isOverdue).forEach(function(t){ alerts.push({c:"var(--crit)",t:"Task overdue — "+t.title,m:"Due "+t.due+" · "+uFirst(t.tech),act:"Open",fn:function(){ openTask(t.id); }}); });
 
@@ -855,14 +855,17 @@
   /* ---------------- SIMs ---------------- */
   function renderSims(){
     var off=db.sims.filter(function(s){return s.status==="offline";}).length; var html='';
-    if(off) html+='<div class="inline-note" style="margin-bottom:14px;color:var(--crit);background:var(--crit-bg);border-color:color-mix(in srgb,var(--crit) 30%,transparent)"><span>⚠</span><span>'+off+' SIM'+(off===1?'':'s')+' offline. Create a diagnostic task from the row.</span></div>';
-    html+='<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>Live status and usage will sync from the 1oT Terminal API (server-side job, next phase).</span></div>';
-    html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>ICCID</th><th>Vehicle</th><th>Client</th><th>Network</th><th>Last seen</th><th>Data</th><th>Status</th><th></th></tr></thead><tbody>';
-    if(!db.sims.length) html+='<tr><td colspan="8"><div class="empty">No SIMs yet</div></td></tr>';
-    db.sims.forEach(function(s){ html+='<tr><td class="tnum cellmuted">'+esc(s.iccid)+'</td><td style="font-weight:600">'+esc(s.vehicle)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.net)+'</td><td class="tnum">'+esc(s.lastseen)+'</td><td class="tnum">'+esc(s.data)+'</td><td>'+simBadge(s.status)+'</td><td>'+(s.status==="offline"?'<button class="btn btn--sm" data-simtask="'+s.id+'">Create task</button>':'')+'</td></tr>'; });
+    var lastSync=db.sims.reduce(function(a,s){ return s.synced&&s.synced!=="—"?s.synced:a; },"");
+    html+='<div class="toolbar"><div class="chipset"></div><div class="spacer"></div>'+(can("sims")?'<button class="btn btn--sm btn--primary" id="sim-sync">↻ Sync from 1oT</button>':'')+'</div>';
+    if(off) html+='<div class="inline-note" style="margin-bottom:14px;color:var(--crit);background:var(--crit-bg);border-color:color-mix(in srgb,var(--crit) 30%,transparent)"><span>⚠</span><span>'+off+' SIM'+(off===1?'':'s')+' with no data session in 12h+. A diagnostic task is raised automatically; you can also create one from the row.</span></div>';
+    html+='<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>Status syncs from the 1oT Terminal API'+(lastSync?' · last synced '+esc(lastSync):'')+'. SIMs silent for 12h+ are flagged offline.</span></div>';
+    html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>ICCID</th><th>Vehicle</th><th>Client</th><th>Network</th><th>Last data</th><th>Data used</th><th>Status</th><th></th></tr></thead><tbody>';
+    if(!db.sims.length) html+='<tr><td colspan="8"><div class="empty">No SIMs yet — click “Sync from 1oT”.</div></td></tr>';
+    db.sims.forEach(function(s){ html+='<tr><td class="tnum cellmuted">'+esc(s.iccid)+'</td><td style="font-weight:600">'+esc(s.vehicle)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.net)+'</td><td class="tnum">'+esc(s.lastdata)+'</td><td class="tnum">'+esc(s.data)+'</td><td>'+simBadge(s.status)+'</td><td>'+(s.status==="offline"?'<button class="btn btn--sm" data-simtask="'+s.id+'">Create task</button>':'')+'</td></tr>'; });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-simtask]").forEach(function(b){ b.onclick=function(){ var s=db.sims.find(function(x){return x.id===b.dataset.simtask;}); quickOfflineTask(s); }; });
+    var sb=document.getElementById("sim-sync"); if(sb) sb.onclick=async function(){ sb.disabled=true; sb.textContent="Syncing…"; var r=await API.simSync(); if(r.error){ toast("Sync failed: "+r.error.message); sb.disabled=false; sb.textContent="↻ Sync from 1oT"; return; } toast("Synced "+r.data.scanned+" SIMs · "+r.data.offline+" offline · "+r.data.tasks_created+" task(s) raised"); var raw=await API.loadAll(); mapAll(raw); renderSims(); };
   }
 
   /* ---------------- Vehicles ---------------- */
