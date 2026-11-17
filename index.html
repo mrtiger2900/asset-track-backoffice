@@ -85,6 +85,8 @@
   .kpi__meta { font-size:11.5px; margin-top:6px; color: var(--fg-dim); }
   .kpi__meta.up { color: var(--good); } .kpi__meta.down { color: var(--crit); }
   .kpi.accent { border-top:3px solid var(--brand-red); }
+  .kpi--link { cursor:pointer; transition:border-color .12s, transform .12s; }
+  .kpi--link:hover { border-color:var(--brand-red); transform:translateY(-1px); }
 
   .grid { display:grid; gap:16px; } .grid--2 { grid-template-columns: 1.4fr 1fr; }
   .card { background: var(--surface); border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow:hidden; }
@@ -407,14 +409,19 @@
   function prioBadge(p){ return '<span class="badge prio-'+p+'">'+cap(p)+'</span>'; }
   function simBadge(s){ if(s==="offline")return '<span class="badge b-crit"><span class="d"></span>Offline</span>'; if(s==="high")return '<span class="badge b-warn"><span class="d"></span>High usage</span>'; return '<span class="badge b-good"><span class="d"></span>Active</span>'; }
   function field(l,v){ return '<div class="field"><label>'+esc(l)+'</label><div class="v">'+esc(v)+'</div></div>'; }
-  function kpi(label,val,unit,meta,accent){ return '<div class="kpi'+(accent?' accent':'')+'"><div class="kpi__label">'+esc(label)+'</div><div class="kpi__val tnum">'+val+(unit?'<small>'+unit+'</small>':'')+'</div><div class="kpi__meta">'+meta+'</div></div>'; }
+  function kpi(label,val,unit,meta,accent,link){ var a=link?(' data-kpi="1"'+(link.nav?' data-k-nav="'+link.nav+'"':'')+(link.tf?' data-k-tf="'+link.tf+'"':'')+(link.of?' data-k-of="'+link.of+'"':'')):''; return '<div class="kpi'+(accent?' accent':'')+(link?' kpi--link':'')+'"'+a+'><div class="kpi__label">'+esc(label)+'</div><div class="kpi__val tnum">'+val+(unit?'<small>'+unit+'</small>':'')+'</div><div class="kpi__meta">'+meta+'</div></div>'; }
 
   /* ---------------- Dashboard ---------------- */
   function renderDashboard(){
     var me=db.currentUser, isAdmin=cur().role==="admin";
     var myTasks=db.tasks.filter(function(t){return t.tech===me&&t.status!=="done";});
+    var totalTasks=db.tasks.length;
     var openT=db.tasks.filter(function(t){return t.status!=="done";}).length;
+    var doneT=totalTasks-openT;
     var overdue=db.tasks.filter(isOverdue).length;
+    var myOverdue=db.tasks.filter(function(t){return t.tech===me&&isOverdue(t);}).length;
+    var techIds=db.users.filter(function(u){return u.role==="technician";}).map(function(u){return u.id;});
+    var techTasks=db.tasks.filter(function(t){return t.status!=="done"&&techIds.indexOf(t.tech)>=0;}).length;
     var installsWk=db.installs.filter(function(i){return i.status!=="completed";}).length;
     var simsOff=db.sims.filter(function(s){return s.status==="offline";}).length;
     var onlinePct=db.sims.length?Math.round((db.sims.length-simsOff)/db.sims.length*100):100;
@@ -427,12 +434,12 @@
     db.tasks.filter(isOverdue).forEach(function(t){ alerts.push({c:"var(--crit)",t:"Task overdue — "+t.title,m:"Due "+t.due+" · "+uFirst(t.tech),act:"Open",fn:function(){ openTask(t.id); }}); });
 
     var html='<div class="kpis">'
-      +kpi("Open tasks",openT,'',overdue?('<span class="down">'+overdue+' overdue</span>'):'All on schedule',true)
-      +kpi("Installs this week",installsWk,'',todays.length+" scheduled today")
-      +kpi("Vehicles tracked",totalVehicles,'','across '+db.clients.length+' clients')
-      +kpi("Fleet online",onlinePct,'%',simsOff+" offline")
-      +kpi("Low stock",lowStock,'',lowStock?'<span class="down">Reorder due</span>':'Stock healthy')
-      +kpi("SLA compliance",96,'%','<span class="up">+2 vs last mo</span>')
+      +kpi("Total tasks",totalTasks,'',openT+" open · "+doneT+" completed",false,{nav:"tasks",of:"everyone",tf:"all"})
+      +kpi("Open tasks",openT,'',overdue?('<span class="down">'+overdue+' overdue</span>'):'All on schedule',true,{nav:"tasks",of:"everyone",tf:"all"})
+      +kpi("My open tasks",myTasks.length,'',myOverdue?('<span class="down">'+myOverdue+' overdue</span>'):'Assigned to me',false,{nav:"tasks",of:"mine",tf:"all"})
+      +kpi("Technician tasks",techTasks,'','across '+techIds.length+' technicians',false,{nav:"tasks",of:"others",tf:"all"})
+      +kpi("Installations",installsWk,'',todays.length+" scheduled today",false,{nav:"installs"})
+      +kpi("Low stock",lowStock,'',lowStock?'<span class="down">Reorder due</span>':'Stock healthy',false,{nav:"inventory"})
     +'</div><div class="grid grid--2">'
       +'<div class="card"><div class="card__head"><h3>'+(isAdmin?'All open tasks':'My tasks')+'</h3><div class="spacer"></div><span class="badge b-neutral">'+(isAdmin?openT:myTasks.length)+'</span></div><div class="card__body">'
       + ((isAdmin?db.tasks.filter(function(t){return t.status!=="done";}):myTasks).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+(isAdmin?' · '+esc(uFirst(t.tech)):'')+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">Nothing assigned to you</div>')
@@ -447,17 +454,24 @@
     view.querySelectorAll("[data-opentask]").forEach(function(b){ b.onclick=function(){ openTask(b.dataset.opentask); }; });
     view.querySelectorAll("[data-openinstall]").forEach(function(b){ b.onclick=function(){ openInstall(b.dataset.openinstall); }; });
     view.querySelectorAll("[data-nav]").forEach(function(b){ b.onclick=function(){ go(b.dataset.nav); }; });
+    view.querySelectorAll("[data-kpi]").forEach(function(el){ el.onclick=function(){ if(el.dataset.kTf) taskFilter=el.dataset.kTf; if(el.dataset.kOf) ownerFilter=el.dataset.kOf; go(el.dataset.kNav||"tasks"); }; });
   }
 
   /* ---------------- Tasks ---------------- */
-  var taskFilter="all";
+  var taskFilter="all", ownerFilter="everyone";
   function renderTasks(){
     var me=db.currentUser, isAdmin=cur().role==="admin";
-    var filters=[["all","All"],["open","Open"],["in_progress","In progress"],["overdue","Overdue"],["done","Completed"]];
+    var filters=[["all","Active"],["open","Open"],["in_progress","In progress"],["overdue","Overdue"],["done","Completed"]];
+    var owners=[["everyone","Everyone"],["mine","My tasks"],["others","Others’ tasks"]];
     var list=db.tasks.slice().sort(function(a,b){return (a.due||"")<(b.due||"")?-1:1;});
     if(!isAdmin) list=list.filter(function(t){return t.tech===me;});
-    if(taskFilter==="overdue") list=list.filter(isOverdue); else if(taskFilter!=="all") list=list.filter(function(t){return t.status===taskFilter;});
-    var html='<div class="toolbar"><div class="chipset">'+filters.map(function(f){return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div></div>'
+    else if(ownerFilter==="mine") list=list.filter(function(t){return t.tech===me;});
+    else if(ownerFilter==="others") list=list.filter(function(t){return t.tech!==me;});
+    if(taskFilter==="all") list=list.filter(function(t){return t.status!=="done";});
+    else if(taskFilter==="overdue") list=list.filter(isOverdue);
+    else list=list.filter(function(t){return t.status===taskFilter;});
+    var html='<div class="toolbar"><div class="chipset">'+filters.map(function(f){return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div>'
+      +(isAdmin?'<div class="chipset" style="margin-top:8px">'+owners.map(function(o){return '<button class="chip'+(ownerFilter===o[0]?' is-on':'')+'" data-of="'+o[0]+'">'+o[1]+'</button>';}).join('')+'</div>':'')+'</div>'
       +(isAdmin?'':'<div class="inline-note" style="margin-bottom:14px"><span>ⓘ</span><span>You only see tasks assigned to you.</span></div>')
       +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
     if(!list.length) html+='<tr><td colspan="6"><div class="empty">No tasks in this view</div></td></tr>';
@@ -465,6 +479,7 @@
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-tf]").forEach(function(b){ b.onclick=function(){ taskFilter=b.dataset.tf; renderTasks(); }; });
+    view.querySelectorAll("[data-of]").forEach(function(b){ b.onclick=function(){ ownerFilter=b.dataset.of; renderTasks(); }; });
     view.querySelectorAll("[data-task]").forEach(function(r){ r.onclick=function(){ openTask(r.dataset.task); }; });
   }
   function openTask(id){
