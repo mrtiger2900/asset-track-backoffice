@@ -410,7 +410,9 @@ create policy photos_delete on public.installation_photos for delete to authenti
 drop policy if exists inventory_select on public.inventory_items;
 create policy inventory_select on public.inventory_items for select to authenticated using (true);
 drop policy if exists inventory_insert on public.inventory_items;
-create policy inventory_insert on public.inventory_items for insert to authenticated with check (public.is_admin());
+-- Any signed-in staff may add stock items (mirrors stock_movements: field staff
+-- receive and record stock). Editing/deleting master data stays admin-only.
+create policy inventory_insert on public.inventory_items for insert to authenticated with check (true);
 drop policy if exists inventory_update on public.inventory_items;
 create policy inventory_update on public.inventory_items for update to authenticated using (true) with check (true);
 drop policy if exists inventory_delete on public.inventory_items;
