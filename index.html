@@ -460,6 +460,11 @@
     db.inventory.filter(function(v){return v.instock<v.min;}).forEach(function(v){ alerts.push({c:"var(--warn)",t:"Low stock — "+v.item,m:v.instock+" in stock · minimum "+v.min,act:"View",fn:function(){ go("inventory"); }}); });
     db.tasks.filter(isOverdue).forEach(function(t){ alerts.push({c:"var(--crit)",t:"Task overdue — "+t.title,m:"Due "+t.due+" · "+uFirst(t.tech),act:"Open",fn:function(){ openTask(t.id); }}); });
 
+    var reorderItems=db.inventory.filter(function(v){return v.instock<v.min;}).sort(function(a,b){return (a.instock-a.min)-(b.instock-b.min);});
+    var stockCard='<div class="card" style="margin-top:16px"><div class="card__head"><h3>Stock levels &amp; reorder</h3><div class="spacer"></div><span class="badge '+(reorderItems.length?'b-crit':'b-good')+'">'+(reorderItems.length?(reorderItems.length+' to reorder'):'all stocked')+'</span></div><div class="card__body">'
+      + (db.inventory.length ? (reorderItems.length ? reorderItems.map(function(v){ return '<div class="alert"><span class="alert__dot" style="background:var(--warn)"></span><div class="alert__body"><div class="alert__title">'+esc(v.item)+'</div><div class="alert__meta">'+v.instock+' in stock · min '+v.min+' · short '+(v.min-v.instock)+'</div></div><button class="alert__act" data-nav="inventory">Inventory</button></div>'; }).join('') : '<div class="empty">All items above their minimum level</div>') : '<div class="empty">No inventory items yet</div>')
+      +'</div></div>';
+
     var html='<div class="kpis">'
       +kpi("Total tasks",totalTasks,'',openT+" open · "+doneT+" completed",false,{nav:"tasks",of:"everyone",tf:"open"})
       +kpi("Open tasks",openT,'',overdue?('<span class="down">'+overdue+' overdue</span>'):'All on schedule',true,{nav:"tasks",of:"everyone",tf:"open"})
@@ -467,8 +472,10 @@
       +kpi("Technician tasks",techTasks,'','across '+techIds.length+' technicians',false,{nav:"tasks",of:"others",tf:"open"})
       +kpi("Installations",installsWk,'',todays.length+" scheduled today",false,{nav:"installs"})
       +kpi("Renewals (14d)",renew14,'',renew7?('<span class="down">'+renew7+' within 7 days</span>'):(renew14?'Assigned to Botshelo':'None due soon'),false,{nav:"tasks",tf:"renewals"})
+      +kpi("Stock to reorder",lowStock,'',lowStock?'below minimum level':'all stocked',!!lowStock,{nav:"inventory"})
     +'</div>'
       +renewalsCard
+      +stockCard
       +'<div class="grid grid--2">'
       +'<div class="card"><div class="card__head"><h3>All open tasks</h3><div class="spacer"></div><span class="badge b-neutral">'+openT+'</span></div><div class="card__body">'
       + (genTasks.filter(function(t){return t.status!=="done"&&(!t.due||t.due<=TODAY);}).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+' · '+esc(uFirst(t.tech))+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">No open tasks</div>')
@@ -765,6 +772,7 @@
       html+='</tbody></table></div></div></div><div class="inline-note" style="margin-top:14px"><span>ⓘ</span><span>Click an item to take units out (logs who + which client) or mark damages. Reorder emails the admin.</span></div>';
     } else {
       var dmg=db.inventory.filter(function(v){return v.damaged>0;});
+      html+='<div style="margin-bottom:12px"><button class="btn btn--sm btn--danger" id="dmg-add">＋ Record damage</button></div>';
       html+='<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Item</th><th>Category</th><th>Damaged units</th></tr></thead><tbody>';
       if(!dmg.length) html+='<tr><td colspan="3"><div class="empty">No damaged stock recorded</div></td></tr>';
       dmg.forEach(function(v){ html+='<tr class="clickable" data-item="'+v.id+'"><td style="font-weight:600">'+esc(v.item)+'</td><td>'+esc(v.cat)+'</td><td><span class="badge b-crit">'+v.damaged+' damaged</span></td></tr>'; });
@@ -774,6 +782,20 @@
     view.querySelectorAll("[data-it]").forEach(function(b){ b.onclick=function(){ invTab=b.dataset.it; renderInventory(); }; });
     view.querySelectorAll("[data-item]").forEach(function(r){ r.onclick=function(e){ if(e.target.closest("[data-reorder]"))return; openItem(r.dataset.item); }; });
     view.querySelectorAll("[data-reorder]").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); var v=db.inventory.find(function(x){return x.id===b.dataset.reorder;}); toast("Reorder request for "+v.item+" emailed to admin"); }; });
+    var dmgAdd=document.getElementById("dmg-add"); if(dmgAdd) dmgAdd.onclick=openDamagePick;
+  }
+  function openDamagePick(){
+    if(!db.inventory.length){ toast("Add an inventory item first"); return; }
+    var opts=db.inventory.map(function(v){return '<option value="'+v.id+'">'+esc(v.item)+' ('+v.instock+' in stock)</option>';}).join('');
+    var body='<div class="form-row"><label class="lbl">Item</label><select id="dp-item">'+opts+'</select></div>'
+      +'<div class="form-2"><div class="form-row"><label class="lbl">Quantity</label><input id="dp-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">Note</label><input id="dp-note" placeholder="e.g. water damage, dropped unit"></div></div>';
+    openModal("Record damage", body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Record damage", cls:"btn btn--danger", fn:function(){
+          var id=document.getElementById("dp-item").value, v=db.inventory.find(function(x){return x.id===id;}); if(!v){ toast("Pick an item"); return; }
+          var qty=parseInt(document.getElementById("dp-qty").value||"0",10); if(qty<1){ toast("Enter a quantity"); return; } if(qty>v.instock){ toast("Only "+v.instock+" in stock"); return; }
+          var note=document.getElementById("dp-note").value||"no note";
+          v.instock-=qty; v.damaged+=qty; v.moves.unshift({ who:cur().init, client:"—", qty:qty, purpose:"Damaged: "+note, date:"Today", dir:"damage" });
+          P.moveStock(v.id,"damage",qty,null,"Damaged: "+note); closeModal(); toast(qty+" × "+v.sku+" moved to damages"); renderInventory();
+        } } ]);
   }
   function openItem(id){
     var v=db.inventory.find(function(x){return x.id===id;}); if(!v)return; var last=v.moves[0];
@@ -787,14 +809,26 @@
     document.getElementById("it-reorder").onclick=function(){ toast("Reorder request for "+v.item+" emailed to admin"); };
   }
   function openTakeStock(v){
-    var body='<div class="form-2"><div class="form-row"><label class="lbl">Quantity</label><input id="ts-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">For client</label><select id="ts-client">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</select></div></div>'
-      +'<div class="form-row"><label class="lbl">Purpose</label><select id="ts-purpose"><option>Install</option><option>Swap</option><option>Replacement</option><option>Repair</option></select></div><div class="inline-note"><span>ⓘ</span><span>Logs who took the units and which client they went to, and reduces stock on hand.</span></div>';
-    openModal("Take out of stock — "+v.item, body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Confirm", cls:"btn btn--primary", fn:function(){
+    var body='<div class="form-2"><div class="form-row"><label class="lbl">Quantity</label><input id="ts-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">For client</label><select id="ts-client"><optgroup label="Existing clients">'+db.clients.map(function(c){return '<option>'+esc(c.name)+'</option>';}).join('')+'</optgroup><option value="__NEW__">＋ New client…</option></select></div></div>'
+      +'<div id="ts-newwrap" style="display:none"><div class="form-2"><div class="form-row"><label class="lbl">New client name</label><input id="ts-newname" placeholder="Company / person"></div><div class="form-row"><label class="lbl">Phone (optional)</label><input id="ts-newphone" placeholder="+267 …"></div></div></div>'
+      +'<div class="form-row"><label class="lbl">Purpose</label><select id="ts-purpose"><option>Install</option><option>Swap</option><option>Replacement</option><option>Repair</option></select></div><div class="inline-note"><span>ⓘ</span><span>Logs who took the units and which client they went to, and reduces stock on hand. Pick “New client” to create and allocate in one step.</span></div>';
+    openModal("Take out of stock — "+v.item, body, [ { label:"Cancel", cls:"btn", fn:closeModal }, { label:"Confirm", cls:"btn btn--primary", fn:async function(){
           var qty=parseInt(document.getElementById("ts-qty").value||"0",10); if(qty<1){ toast("Enter a quantity"); return; } if(qty>v.instock){ toast("Only "+v.instock+" in stock"); return; }
-          var forClient=document.getElementById("ts-client").value, purpose=document.getElementById("ts-purpose").value;
+          var sel=document.getElementById("ts-client").value, purpose=document.getElementById("ts-purpose").value, forClient;
+          if(sel==="__NEW__"){
+            var nm=document.getElementById("ts-newname").value.trim(); if(!nm){ toast("Enter the new client name"); return; }
+            if(clientIdByName[nm]){ forClient=nm; }
+            else {
+              var ph=document.getElementById("ts-newphone").value.trim();
+              var row=await P.createClient({ name:nm, industry:"—", contact:"—", phone:ph||"—", fleet:0, products:[] }); if(!row) return;
+              db.clients.unshift({ id:row.id, name:nm, industry:"—", email:"", contact:"—", phone:ph||"—", fleet:0, products:[], expires:"—" });
+              forClient=nm;
+            }
+          } else { forClient=sel; }
           v.instock-=qty; v.moves.unshift({ who:cur().init, client:forClient, qty:qty, purpose:purpose, date:"Today", dir:"out" });
           P.moveStock(v.id,"out",qty,forClient,purpose); closeModal(); toast(qty+" × "+v.sku+" taken out for "+forClient); openItem(v.id); renderInventory();
         } } ]);
+    var tsc=document.getElementById("ts-client"); if(tsc) tsc.onchange=function(){ document.getElementById("ts-newwrap").style.display=this.value==="__NEW__"?"":"none"; };
   }
   function openDamage(v){
     var body='<div class="form-row"><label class="lbl">Quantity</label><input id="dm-qty" type="number" min="1" value="1"></div><div class="form-row"><label class="lbl">Note</label><input id="dm-note" placeholder="e.g. water damage, dropped unit"></div>';
