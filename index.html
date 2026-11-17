@@ -87,6 +87,12 @@
   .kpi.accent { border-top:3px solid var(--brand-red); }
   .kpi--link { cursor:pointer; transition:border-color .12s, transform .12s; }
   .kpi--link:hover { border-color:var(--brand-red); transform:translateY(-1px); }
+  .chipcount { display:inline-block; background:var(--brand-red); color:#fff; border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; margin-left:5px; line-height:16px; }
+  .data tr.preview { opacity:.72; }
+  .renewrow { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+  .renewstat { flex:1 1 120px; min-width:110px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--surface); }
+  .renewstat__n { font-size:24px; font-weight:700; line-height:1.1; }
+  .renewstat__l { font-size:11.5px; color:var(--fg-dim); margin-top:2px; }
 
   .grid { display:grid; gap:16px; } .grid--2 { grid-template-columns: 1.4fr 1fr; }
   .card { background: var(--surface); border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow:hidden; }
@@ -288,7 +294,7 @@
   var CAT_LABEL = {}; var CAT_ENUM = {}; CATS.forEach(function(p){ CAT_LABEL[p[0]]=p[1]; CAT_ENUM[p[1]]=p[0]; });
   var STATUS_LABEL = { open:"Open", in_progress:"In progress", done:"Completed", scheduled:"Scheduled", completed:"Completed" };
 
-  var db = { users:[], clients:[], vehicles:[], sims:[], tasks:[], installs:[], inventory:[], currentUser:null };
+  var db = { users:[], clients:[], vehicles:[], sims:[], tasks:[], installs:[], inventory:[], subs:[], recurrences:[], currentUser:null };
   var clientIdByName = {}, clientNameById = {}, vehicleRegById = {};
 
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); };
@@ -317,7 +323,9 @@
     (raw.task_comments||[]).slice().sort(function(a,b){return a.created_at<b.created_at?-1:1;}).forEach(function(c){
       (commentsByTask[c.task_id]=commentsByTask[c.task_id]||[]).push({ who:(user(c.author_id)||{}).init||"·", txt:c.body, when:fmtDate(c.created_at) });
     });
-    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:t.all_clients?"All clients":(clientNameById[t.client_id]||"—"), allClients:!!t.all_clients, tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, recId:t.recurrence_id||null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
+    db.tasks = (raw.tasks||[]).map(function(t){ return { id:t.id, title:t.title, client:t.all_clients?"All clients":(clientNameById[t.client_id]||"—"), allClients:!!t.all_clients, tech:t.assigned_to, due:t.due_date||"", status:t.status, prio:t.priority, recurring:(t.recurrence&&t.recurrence!=="none")?cap(t.recurrence):null, recId:t.recurrence_id||null, cat:t.category||"general", subId:t.subscription_id||null, comments:commentsByTask[t.id]||[], created_at:t.created_at, done_at:t.completed_at }; });
+    db.subs = (raw.subscriptions||[]).map(function(s){ return { id:s.id, reg:s.reg, client:clientNameById[s.client_id]||s.client_name||"—", expiry:s.expiry_date, status:s.status, days: s.expiry_date? Math.round((new Date(s.expiry_date+"T00:00:00")-new Date(TODAY+"T00:00:00"))/86400000) : null }; });
+    db.recurrences = (raw.task_recurrences||[]).filter(function(r){return r.active;}).map(function(r){ return { id:r.id, title:r.title, client:clientNameById[r.client_id]||(r.all_clients?"All clients":"—"), tech:r.assigned_to, prio:r.priority, freq:r.frequency, anchor:r.anchor_date||null }; });
 
     db.installs = (raw.installations||[]).map(function(i){ return { id:i.id, ref:i.ref, client:clientNameById[i.client_id]||i.vehicle_reg||"—", contact:i.contact_name||"—", phone:i.contact_phone||"—", vehicle:i.vehicle_reg||(vehicleRegById[i.vehicle_id]||"—"), type:INSTALL_LABEL[i.job_type]||i.job_type, date:i.scheduled_date||"", time:(i.scheduled_time||"").slice(0,5), loc:i.location||"—", tech:i.assigned_to, status:i.status, photos:0, signed:!!i.signed }; });
 
@@ -414,35 +422,56 @@
   /* ---------------- Dashboard ---------------- */
   function renderDashboard(){
     var me=db.currentUser, isAdmin=cur().role==="admin";
-    var myTasks=db.tasks.filter(function(t){return t.tech===me&&t.status!=="done";});
-    var totalTasks=db.tasks.length;
-    var openT=db.tasks.filter(function(t){return t.status!=="done";}).length;
+    var genTasks=db.tasks.filter(function(t){return t.cat!=="subscription_renewal";});
+    var myTasks=genTasks.filter(function(t){return t.tech===me&&t.status!=="done";});
+    var totalTasks=genTasks.length;
+    var openT=genTasks.filter(function(t){return t.status!=="done";}).length;
     var doneT=totalTasks-openT;
-    var overdue=db.tasks.filter(isOverdue).length;
-    var myOverdue=db.tasks.filter(function(t){return t.tech===me&&isOverdue(t);}).length;
+    var overdue=genTasks.filter(isOverdue).length;
+    var myOverdue=genTasks.filter(function(t){return t.tech===me&&isOverdue(t);}).length;
     var techIds=db.users.filter(function(u){return u.role==="technician";}).map(function(u){return u.id;});
-    var techTasks=db.tasks.filter(function(t){return t.status!=="done"&&techIds.indexOf(t.tech)>=0;}).length;
+    var techTasks=genTasks.filter(function(t){return t.status!=="done"&&techIds.indexOf(t.tech)>=0;}).length;
     var installsWk=db.installs.filter(function(i){return i.status!=="completed";}).length;
     var simsOff=db.sims.filter(function(s){return s.status==="offline";}).length;
     var onlinePct=db.sims.length?Math.round((db.sims.length-simsOff)/db.sims.length*100):100;
     var totalVehicles=db.clients.reduce(function(a,c){return a+(c.fleet||0);},0);
     var lowStock=db.inventory.filter(function(v){return v.instock<v.min;}).length;
     var todays=db.installs.filter(function(i){return i.date===TODAY;});
+    var subsActive=db.subs.filter(function(s){return s.status==="active"&&s.days!=null;});
+    var renew7=subsActive.filter(function(s){return s.days>=0&&s.days<=7;}).length;
+    var renew14=subsActive.filter(function(s){return s.days>=0&&s.days<=14;}).length;
+    var renew30=subsActive.filter(function(s){return s.days>=0&&s.days<=30;}).length;
+    var tdd=new Date(TODAY+"T00:00:00"), cy=tdd.getFullYear(), cm=tdd.getMonth();
+    var thisMonthR=subsActive.filter(function(s){ var d=new Date(s.expiry+"T00:00:00"); return d>=tdd&&d.getFullYear()===cy&&d.getMonth()===cm; }).length;
+    var nmY=cm===11?cy+1:cy, nmM=cm===11?0:cm+1;
+    var nextMonthR=subsActive.filter(function(s){ var d=new Date(s.expiry+"T00:00:00"); return d.getFullYear()===nmY&&d.getMonth()===nmM; }).length;
+    var soonR=subsActive.filter(function(s){return s.days>=0;}).sort(function(a,b){return a.days-b.days;}).slice(0,6);
+    var renewalsCard = subsActive.length ? ('<div class="card" style="margin-top:16px"><div class="card__head"><h3>Subscription renewals</h3><div class="spacer"></div><span class="badge b-neutral">'+subsActive.length+' active</span></div><div class="card__body">'
+      +'<div class="renewrow">'
+        +'<div class="renewstat"><div class="renewstat__n">'+renew7+'</div><div class="renewstat__l">next 7 days</div></div>'
+        +'<div class="renewstat"><div class="renewstat__n">'+thisMonthR+'</div><div class="renewstat__l">rest of '+tdd.toLocaleDateString(undefined,{month:"long"})+'</div></div>'
+        +'<div class="renewstat"><div class="renewstat__n">'+nextMonthR+'</div><div class="renewstat__l">next month</div></div>'
+        +'<div class="renewstat"><div class="renewstat__n">'+renew30+'</div><div class="renewstat__l">within 30 days</div></div>'
+      +'</div>'
+      +soonR.map(function(s){ var lbl=s.days===0?"today":s.days===1?"tomorrow":"in "+s.days+" days"; return '<div class="alert"><span class="alert__dot" style="background:'+(s.days<=7?"var(--crit)":s.days<=14?"var(--warn)":"var(--info)")+'"></span><div class="alert__body"><div class="alert__title">'+esc(s.reg)+' · '+esc(s.client)+'</div><div class="alert__meta">Expires '+esc(s.expiry)+' · '+lbl+'</div></div><button class="alert__act" data-kpi="1" data-k-nav="tasks" data-k-tf="renewals">Renewals</button></div>'; }).join('')
+      +'</div></div>') : '';
     var alerts=[];
     db.sims.filter(function(s){return s.status==="offline";}).forEach(function(s){ alerts.push({c:"var(--crit)",t:"SIM offline — "+s.vehicle+" ("+s.client+")",m:"No data for "+s.lastseen+" · "+s.iccid,act:"Create task",fn:function(){ quickOfflineTask(s); }}); });
     db.inventory.filter(function(v){return v.instock<v.min;}).forEach(function(v){ alerts.push({c:"var(--warn)",t:"Low stock — "+v.item,m:v.instock+" in stock · minimum "+v.min,act:"View",fn:function(){ go("inventory"); }}); });
     db.tasks.filter(isOverdue).forEach(function(t){ alerts.push({c:"var(--crit)",t:"Task overdue — "+t.title,m:"Due "+t.due+" · "+uFirst(t.tech),act:"Open",fn:function(){ openTask(t.id); }}); });
 
     var html='<div class="kpis">'
-      +kpi("Total tasks",totalTasks,'',openT+" open · "+doneT+" completed",false,{nav:"tasks",of:"everyone",tf:"all"})
-      +kpi("Open tasks",openT,'',overdue?('<span class="down">'+overdue+' overdue</span>'):'All on schedule',true,{nav:"tasks",of:"everyone",tf:"all"})
-      +kpi("My open tasks",myTasks.length,'',myOverdue?('<span class="down">'+myOverdue+' overdue</span>'):'Assigned to me',false,{nav:"tasks",of:"mine",tf:"all"})
-      +kpi("Technician tasks",techTasks,'','across '+techIds.length+' technicians',false,{nav:"tasks",of:"others",tf:"all"})
+      +kpi("Total tasks",totalTasks,'',openT+" open · "+doneT+" completed",false,{nav:"tasks",of:"everyone",tf:"open"})
+      +kpi("Open tasks",openT,'',overdue?('<span class="down">'+overdue+' overdue</span>'):'All on schedule',true,{nav:"tasks",of:"everyone",tf:"open"})
+      +kpi("My open tasks",myTasks.length,'',myOverdue?('<span class="down">'+myOverdue+' overdue</span>'):'Assigned to me',false,{nav:"tasks",of:"mine",tf:"open"})
+      +kpi("Technician tasks",techTasks,'','across '+techIds.length+' technicians',false,{nav:"tasks",of:"others",tf:"open"})
       +kpi("Installations",installsWk,'',todays.length+" scheduled today",false,{nav:"installs"})
-      +kpi("Low stock",lowStock,'',lowStock?'<span class="down">Reorder due</span>':'Stock healthy',false,{nav:"inventory"})
-    +'</div><div class="grid grid--2">'
+      +kpi("Renewals (14d)",renew14,'',renew7?('<span class="down">'+renew7+' within 7 days</span>'):(renew14?'Assigned to Botshelo':'None due soon'),false,{nav:"tasks",tf:"renewals"})
+    +'</div>'
+      +renewalsCard
+      +'<div class="grid grid--2">'
       +'<div class="card"><div class="card__head"><h3>All open tasks</h3><div class="spacer"></div><span class="badge b-neutral">'+openT+'</span></div><div class="card__body">'
-      + (db.tasks.filter(function(t){return t.status!=="done";}).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+' · '+esc(uFirst(t.tech))+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">No open tasks</div>')
+      + (genTasks.filter(function(t){return t.status!=="done"&&(!t.due||t.due<=TODAY);}).slice(0,6).map(function(t){ return '<div class="alert" style="cursor:pointer" data-opentask="'+t.id+'"><span class="alert__dot" style="background:'+(isOverdue(t)?'var(--crit)':t.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(t.title)+'</div><div class="alert__meta">'+esc(t.client)+(t.due?' · due '+esc(t.due):'')+' · '+esc(uFirst(t.tech))+'</div></div>'+prioBadge(t.prio)+'</div>'; }).join('') || '<div class="empty">No open tasks</div>')
       +'</div></div><div class="card"><div class="card__head"><h3>Today’s schedule</h3><div class="spacer"></div>'+(can('installs')?'<button class="link" data-nav="installs">Board</button>':'')+'</div><div class="card__body">'
       + (todays.length? todays.map(function(i){ return '<div class="alert" style="cursor:pointer" data-openinstall="'+i.id+'"><span class="alert__dot" style="background:'+(i.status==="completed"?'var(--good)':i.status==="in_progress"?'var(--warn)':'var(--info)')+'"></span><div class="alert__body"><div class="alert__title">'+esc(i.time)+' · '+esc(i.client)+'</div><div class="alert__meta">'+esc(i.type)+' · '+esc(i.loc)+' · '+uInit(i.tech)+'</div></div></div>'; }).join('') : '<div class="empty">Nothing scheduled today</div>')
       +'</div></div></div>'
@@ -458,22 +487,53 @@
   }
 
   /* ---------------- Tasks ---------------- */
-  var taskFilter="all", ownerFilter="everyone";
+  function addDays(dstr,n){ var d=new Date(dstr+"T00:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+  function nextRecur(r){
+    var anc=r.anchor||TODAY, ad=new Date(anc+"T00:00:00"), td=new Date(TODAY+"T00:00:00"), d;
+    if(r.freq==="daily") return addDays(TODAY,1);
+    if(r.freq==="weekly"){ d=new Date(td); do{ d.setDate(d.getDate()+1); }while(d.getDay()!==ad.getDay()); return d.toISOString().slice(0,10); }
+    if(r.freq==="monthly"){ d=new Date(td.getFullYear(),td.getMonth(),ad.getDate()); if(d<=td) d=new Date(td.getFullYear(),td.getMonth()+1,ad.getDate()); return d.toISOString().slice(0,10); }
+    if(r.freq==="quarterly"){ d=new Date(td.getFullYear(),td.getMonth(),ad.getDate()); var g=0; while(d<=td||(((d.getMonth()-ad.getMonth())%3+3)%3!==0)){ d=new Date(d.getFullYear(),d.getMonth()+1,ad.getDate()); if(++g>48) break; } return d.toISOString().slice(0,10); }
+    return addDays(TODAY,1);
+  }
+  function renewalOpenCount(){ return db.tasks.filter(function(t){return t.cat==="subscription_renewal"&&t.status!=="done";}).length; }
+  var taskFilter="open", ownerFilter="everyone";
   function renderTasks(){
-    var me=db.currentUser, isAdmin=cur().role==="admin";
-    var filters=[["all","Active"],["open","Open"],["in_progress","In progress"],["overdue","Overdue"],["done","Completed"]];
+    var me=db.currentUser;
+    var filters=[["open","Open"],["upcoming","Upcoming"],["overdue","Overdue"],["done","Completed"],["renewals","Renewals"]];
     var owners=[["everyone","Everyone"],["mine","My tasks"],["others","Others’ tasks"]];
-    var list=db.tasks.slice().sort(function(a,b){return (a.due||"")<(b.due||"")?-1:1;});
-    if(ownerFilter==="mine") list=list.filter(function(t){return t.tech===me;});
-    else if(ownerFilter==="others") list=list.filter(function(t){return t.tech!==me;});
-    if(taskFilter==="all") list=list.filter(function(t){return t.status!=="done";});
-    else if(taskFilter==="overdue") list=list.filter(isOverdue);
-    else list=list.filter(function(t){return t.status===taskFilter;});
-    var html='<div class="toolbar"><div class="chipset">'+filters.map(function(f){return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div>'
-      +'<div class="chipset" style="margin-top:8px">'+owners.map(function(o){return '<button class="chip'+(ownerFilter===o[0]?' is-on':'')+'" data-of="'+o[0]+'">'+o[1]+'</button>';}).join('')+'</div></div>'
-      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
-    if(!list.length) html+='<tr><td colspan="6"><div class="empty">No tasks in this view</div></td></tr>';
-    list.forEach(function(t){ html+='<tr class="clickable" data-task="'+t.id+'"><td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off')+'</div></td><td>'+(t.allClients?'<span class="badge b-info">🌐 All clients</span>':esc(t.client))+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due||"—")+'</td><td>'+prioBadge(t.prio)+'</td><td>'+taskStatusBadge(t)+'</td></tr>'; });
+    var isRenewals=(taskFilter==="renewals"), list;
+    if(isRenewals){ list=db.tasks.filter(function(t){return t.cat==="subscription_renewal";}); }
+    else {
+      var base=db.tasks.filter(function(t){return t.cat!=="subscription_renewal";});
+      if(taskFilter==="overdue") list=base.filter(isOverdue);
+      else if(taskFilter==="done") list=base.filter(function(t){return t.status==="done";});
+      else if(taskFilter==="upcoming"){
+        var realFuture=base.filter(function(t){return t.status!=="done"&&t.due&&t.due>TODAY;});
+        var haveRec={}; realFuture.forEach(function(t){ if(t.recId) haveRec[t.recId]=1; });
+        var virt=db.recurrences.filter(function(r){return !haveRec[r.id];}).map(function(r){ return { id:null, virtual:true, title:r.title, client:r.client, tech:r.tech, due:nextRecur(r), prio:r.prio, recurring:cap(r.freq), cat:"general", status:"upcoming" }; });
+        list=realFuture.concat(virt);
+      }
+      else list=base.filter(function(t){return t.status!=="done"&&(!t.due||t.due<=TODAY);}); // open
+    }
+    if(!isRenewals){
+      if(ownerFilter==="mine") list=list.filter(function(t){return t.tech===me;});
+      else if(ownerFilter==="others") list=list.filter(function(t){return t.tech!==me;});
+    }
+    list=list.slice().sort(function(a,b){return (a.due||"")<(b.due||"")?-1:1;});
+    var ownerChips=isRenewals?'':'<div class="chipset" style="margin-top:8px">'+owners.map(function(o){return '<button class="chip'+(ownerFilter===o[0]?' is-on':'')+'" data-of="'+o[0]+'">'+o[1]+'</button>';}).join('')+'</div>';
+    var note=taskFilter==="upcoming"?'<div class="inline-note" style="margin-bottom:14px"><span>🕑</span><span>A preview of what’s coming. A recurring task moves into <b>Open</b> on its due date — completing today’s copy won’t remove tomorrow’s.</span></div>'
+      :isRenewals?'<div class="inline-note" style="margin-bottom:14px"><span>🔄</span><span>Renewals are created automatically for Botshelo as vehicles near expiry. Everyone can see them; they stay out of the main task list.</span></div>':'';
+    var html='<div class="toolbar"><div class="chipset">'+filters.map(function(f){ var c=(f[0]==="renewals"&&renewalOpenCount())?' <span class="chipcount">'+renewalOpenCount()+'</span>':''; return '<button class="chip'+(taskFilter===f[0]?' is-on':'')+'" data-tf="'+f[0]+'">'+f[1]+c+'</button>';}).join('')+'</div>'+ownerChips+'</div>'
+      +note
+      +'<div class="card"><div class="card__body flush"><div class="tablewrap"><table class="data"><thead><tr><th>'+(isRenewals?'Subscription':'Task')+'</th><th>Client</th><th>Assigned</th><th>'+(isRenewals?'Expires':'Due')+'</th><th>Priority</th><th>Status</th></tr></thead><tbody>';
+    if(!list.length) html+='<tr><td colspan="6"><div class="empty">'+(taskFilter==="upcoming"?"Nothing upcoming":isRenewals?"No renewals due":"No tasks in this view")+'</div></td></tr>';
+    list.forEach(function(t){
+      var rowOpen=t.virtual?'<tr class="preview">':'<tr class="clickable" data-task="'+t.id+'">';
+      var sub=t.virtual?(t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">upcoming</span>'):(t.recurring?t.recurring+' <span class="badge b-neutral" style="font-size:9.5px">recurring</span>':'One-off');
+      var statusCell=t.virtual?'<span class="badge b-info"><span class="d"></span>Upcoming</span>':taskStatusBadge(t);
+      html+=rowOpen+'<td><div style="font-weight:600">'+esc(t.title)+'</div><div class="cellmuted">'+sub+'</div></td><td>'+(t.allClients?'<span class="badge b-info">🌐 All clients</span>':esc(t.client))+'</td><td><span class="badge b-neutral">'+uInit(t.tech)+'</span> '+esc(uFirst(t.tech))+'</td><td class="tnum">'+esc(t.due||"—")+'</td><td>'+prioBadge(t.prio)+'</td><td>'+statusCell+'</td></tr>';
+    });
     html+='</tbody></table></div></div></div>';
     view.innerHTML=html;
     view.querySelectorAll("[data-tf]").forEach(function(b){ b.onclick=function(){ taskFilter=b.dataset.tf; renderTasks(); }; });
@@ -915,6 +975,7 @@
     var me=await API.myProfile();
     if(!me){ showLogin("Could not load your profile. Contact your admin."); return; }
     try { await API.generateDaily(); } catch(e){ /* non-fatal: the morning cron also covers this */ }
+    try { await API.generateRenewals(); } catch(e){ /* non-fatal: the morning cron also covers this */ }
     var raw=await API.loadAll(); mapAll(raw);
     if(!db.users.find(function(u){return u.id===me.id;})) db.users.push({ id:me.id, name:me.first_name||"", surname:me.last_name||"", init:me.initials||"U", role:me.role, perms:me.module_access||[], phone:me.phone });
     db.currentUser=me.id;

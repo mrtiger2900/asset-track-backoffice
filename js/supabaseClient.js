@@ -34,7 +34,8 @@
     // ---- Bulk load (called once on sign-in) -------------------------------
     async loadAll() {
       var tables = ["profiles", "clients", "vehicles", "sims", "tasks",
-                    "task_comments", "installations", "inventory_items", "stock_movements"];
+                    "task_comments", "installations", "inventory_items", "stock_movements",
+                    "subscriptions", "task_recurrences"];
       var out = {};
       await Promise.all(tables.map(async function (t) {
         var r = await client.from(t).select("*");
@@ -47,6 +48,7 @@
     async createRecurrence(t)      { return client.from("task_recurrences").insert(t).select().single(); },
     async stopRecurrence(id)       { return client.from("task_recurrences").update({ active:false }).eq("id", id); },
     async generateDaily()          { return client.rpc("generate_recurring_tasks"); },
+    async generateRenewals()       { return client.rpc("generate_renewal_tasks"); },
 
     // ---- Tasks ------------------------------------------------------------
     async createTask(t)            { return client.from("tasks").insert(t).select().single(); },
