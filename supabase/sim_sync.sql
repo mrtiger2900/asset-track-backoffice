@@ -22,3 +22,26 @@ create index if not exists idx_tasks_sim_iccid on public.tasks(sim_iccid) where 
 -- Category value used for these tasks is 'sim_offline' (tasks.category already
 -- exists from the subscriptions migration). No enum change required — category
 -- is free text.
+
+-- Task generator: one INSERT…SELECT that raises a task for every offline SIM
+-- that is linked to a client and has no open task yet. Linked-only keeps it
+-- meaningful and prevents a flood (a telematics SIM pool has many spare/idle
+-- SIMs). Unlinked offline SIMs are still visible on the SIM page.
+create or replace function public.generate_sim_offline_tasks()
+returns integer language plpgsql security definer set search_path=public as $$
+declare made integer;
+begin
+  with ins as (
+    insert into public.tasks (title, client_id, due_date, status, priority, recurrence, category, sim_iccid)
+    select 'Offline tracker — '||coalesce(nullif(s.sim_name,''), s.iccid)||' (no data 12h+)',
+           s.client_id, (now() at time zone 'Africa/Gaborone')::date,
+           'open','urgent','none','sim_offline', s.iccid
+    from public.sims s
+    where s.state='offline' and s.client_id is not null
+      and not exists (select 1 from public.tasks t where t.sim_iccid=s.iccid and t.status<>'done')
+    returning 1
+  ) select count(*) into made from ins;
+  return made;
+end; $$;
+
+grant execute on function public.generate_sim_offline_tasks() to authenticated, anon, service_role;

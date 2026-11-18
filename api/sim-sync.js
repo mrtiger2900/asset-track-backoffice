@@ -121,36 +121,19 @@ module.exports = async function handler(req, res){
     if(up.ok) upserted += chunk.length;
   }
 
-  // --- 5. raise a diagnostic task for each newly-quiet SIM (deduped by iccid) ---
+  // --- 5. raise tasks for offline SIMs linked to a client — one DB call.
+  // Only SIMs mapped to a client get a task (meaningful + never floods); a
+  // single SQL function inserts them, deduped by ICCID. Unlinked offline SIMs
+  // are still visible/flagged on the SIM page.
   let tasksCreated = 0;
-  const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Gaborone" })).toISOString().slice(0, 10);
-  for(const s of offlineNow){
-    const iccid = s.iccid;
-    // skip if an open sim_offline task already exists for this SIM
-    const ex = await fetch(SUPABASE_URL + "/rest/v1/tasks?sim_iccid=eq." + encodeURIComponent(iccid) + "&status=neq.done&select=id&limit=1", { headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + SERVICE_KEY } });
-    const exArr = ex.ok ? await ex.json() : [];
-    if(exArr.length) continue;
-    // link to our sims row (for client_id) if we have it
-    const simRow = await fetch(SUPABASE_URL + "/rest/v1/sims?iccid=eq." + encodeURIComponent(iccid) + "&select=client_id,vehicle_id&limit=1", { headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + SERVICE_KEY } });
-    const simArr = simRow.ok ? await simRow.json() : [];
-    const client_id = simArr[0] && simArr[0].client_id ? simArr[0].client_id : null;
-    const label = s.name || iccid;
-    const mk = await fetch(SUPABASE_URL + "/rest/v1/tasks", {
+  try {
+    const gen = await fetch(SUPABASE_URL + "/rest/v1/rpc/generate_sim_offline_tasks", {
       method: "POST",
-      headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + SERVICE_KEY, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({
-        title: "Offline tracker — " + label + " (no data " + OFFLINE_HOURS + "h+)",
-        client_id: client_id,
-        due_date: today,
-        status: "open",
-        priority: "urgent",
-        recurrence: "none",
-        category: "sim_offline",
-        sim_iccid: iccid
-      })
+      headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + SERVICE_KEY, "Content-Type": "application/json" },
+      body: "{}"
     });
-    if(mk.ok) tasksCreated++;
-  }
+    if(gen.ok){ const g = await gen.json().catch(function(){ return 0; }); tasksCreated = typeof g === "number" ? g : 0; }
+  } catch(e){ /* non-fatal */ }
 
   return send(res, 200, { ok: true, scanned: sims.length, upserted: upserted, offline: offlineNow.length, tasks_created: tasksCreated });
 };

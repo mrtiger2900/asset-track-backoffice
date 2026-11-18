@@ -3,6 +3,9 @@
   "crons": [
     { "path": "/api/sim-sync", "schedule": "0 5 * * *" }
   ],
+  "functions": {
+    "api/sim-sync.js": { "maxDuration": 60 }
+  },
   "headers": [
     {
       "source": "/(.*)",
